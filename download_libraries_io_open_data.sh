@@ -10,14 +10,14 @@ FILENAME=${2:-Libraries.io-open-data-1.4.0.tar.gz}
 CHECKSUM=${3:-5bf302e6944cb1a8283a316f65b24093}
 
 curl -SL -XGET "$URL" --output "${FILENAME}"
-ACTUAL=$(md5sum -q "${FILENAME}")
+ACTUAL=$(md5 -q "${FILENAME}")
 
-if [[ "${ACTUAL}" == "${CHECKSUM}" ]]; then
+if [ "${ACTUAL}" = "${CHECKSUM}" ]; then
     2<&1 echo "${ACTUAL}"
     res=0
 else
     2<&1 echo "Deleting ${FILENAME}"
-    rm -f ${FILENAME}
+    rm -f "${FILENAME}"
     res=1
 fi
 
