@@ -16,7 +16,7 @@ if [ "${ACTUAL}" = "${CHECKSUM}" ]; then
     2<&1 echo "${ACTUAL}"
     res=0
 else
-    2<&1 echo "Deleting ${FILENAME}"
+    2<&1 echo "Checksum did not match. Deleting ${FILENAME}"
     rm -f "${FILENAME}"
     res=1
 fi
