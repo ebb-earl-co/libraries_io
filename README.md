@@ -26,17 +26,23 @@ open source software. An understanding that we want to share with **you**.
 Libraries.io has an easy-to-use [API](https://libraries.io/api), but
 given that PyPi is the fourth-most-represented package manager in the Open Data
 with 200,000+ packages, the number of API calls to various endpoints to collate 
-the necessary data is not appealing. Fortunately, 
-[Jeremy Katz on Zenodo](https://zenodo.org/record/2536573) maintains snapshots 
-of the Libraries.io Open Data source. The most recent version is a snapshot from
-22 December 2018, and contains the following CSV files:
-  1. Projects
-  2. Versions
-  3. Tags
-  4. Dependencies
-  5. Repositories
-  6. Repository dependencies
-  7. Projects with Related Repository Fields
+the necessary data is not appealing (Libraries.io rate limits to 60 requests
+per minute). Fortunately, [Jeremy Katz on Zenodo](https://zenodo.org/record/2536573)
+maintains snapshots of the Libraries.io Open Data source. The most recent
+version is a snapshot from 22 December 2018, and contains the following CSV files:
+  1. Projects (3 333 927 rows)
+  2. Versions (16 147 579 rows)
+  3. Tags (52 506 651 rows)
+  4. Dependencies (105 811 885 rows)
+  5. Repositories (34 061 561 rows)
+  6. Repository dependencies (279 861 607 rows)
+  7. Projects with Related Repository Fields (3 343 749 rows)
+
+More information about these CSVs is in the `README` file included in the Open
+Data tar.gz, copied [here](https://github.com/ebb-earl-co/libraries_io/blob/master/data/README).
+There is a substantial reduction in the data when subsetting these CSVs just
+to the data pertaining to Pypi; find the code I used to subset them and the
+size comparisons [here](https://github.com/ebb-earl-co/libraries_io/blob/master/data/pypi_subsetting.md).
 
 **WARNING**: The tar.gz file that contains these data is 12 GB itself, and
 once downloaded takes quite a while to un`tar`; once expanded, the data
@@ -49,7 +55,7 @@ of data make [graph databases](https://db-engines.com/en/ranking/graph+dbms) and
 [graph theory](https://medium.freecodecamp.org/i-dont-understand-graph-theory-1c96572a1401)
 the ideal tools for this type of analysis. [Neo4j](https://neo4j.com/product/)
 is the most popular graph database according to [DB engines](https://neo4j.com/product/),
-and is the one that we will use for this project.
+and is the one that we will use for the analysis.
 Part of the reason for its popularity is that its query language,
 [Cypher](https://neo4j.com/developer/cypher-query-language/), is expressive and simple:
 
@@ -63,18 +69,26 @@ Terminology that will be useful going forward:
   - `KNOWS`, and all Neo4j relationships, are __directed__; i.e. `Jane Doe`
   knows `John Smith`, but not the converse
 
+On MacOS, the easiest way to use Neo4j is via the Neo4j Desktop app, available 
+as the [`neo4j` cask on Homebrew](https://github.com/Homebrew/homebrew-cask/blob/master/Casks/neo4j.rb).
+Neo4j Desktop is a great IDE for Neo4j, allowing simple installation of different
+versions of Neo4j as well as plugins that are optional 
+(e.g. [`APOC`](https://neo4j.com/docs/labs/apoc/current/)) but
+are really the best way to interact with the graph database. Moreover, the
+screenshot above is taken from the Neo4j Browser, a really nice interactive
+query interface as well as visual query result.
 ### Making a Graph of CSV Data
 [Importing from CSV](https://neo4j.com/docs/cypher-manual/3.5/clauses/load-csv/)
 is one of the most common ways to create a Neo4j graph, and is how we will
 proceed given that the Open Data snapshot un`tar`s into CSV files. However,
 first a data model is necessary— what the entities that will be
-represented as labelled nodes with properties, and what are the
-relationships among them are going to be. Moreover, some settings of Neo4j
+represented as labelled nodes with properties and the relationships 
+among them are going to be. Moreover, some settings of Neo4j
 will have to be customized for proper and timely import from CSV.
 #### Data Model
-Basically, when working within a data paradigm, the nouns become nodes and
-how the nouns interact (the verbs) become the relationships. In the case of
-the Libraries.io data, the following is the data model (produced with the
-[Arrow Tool](https://www.apcjones.com/arrow)):
+Basically, when translating a data paradigm into graph data form, the nouns
+become nodes and how the nouns interact (the verbs) become the relationships.
+In the case of the Libraries.io data, the following is the data model
+(produced with the [Arrow Tool](https://www.apcjones.com/arrow)):
 
 ![data model](arrows.svg)
