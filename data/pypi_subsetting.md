@@ -7,12 +7,11 @@ If un`tar`red correctly, the following are the sizes of the files:
 
  - `projects.csv`:
 ```bash
-$ wc -l projects.csv
- 3333927
+$ wc -l projects-1.4.0-2018-12-22.csv 3333927
 ``` 
 and after filtering for just Python packages on Pypi:
 ```bash
-$ mlr --icsv --opprint filter '$Platform == "Pypi"' projects.csv | wc -l
+$ mlr --icsv --opprint filter '$Platform == "Pypi"' projects-1.4.0-2018-12-22.csv | wc -l
  172412
 ```
 
@@ -23,7 +22,7 @@ $ wc -l /Volumes/MEMORIA/libraries/dependencies.csv
 ```
 records. However, those that pertain to Pypi only number
 ```bash
-$ mlr --icsv --opprint filter '$Platform == "Pypi"' dependencies.csv | wc -l
+$ mlr --icsv --opprint filter '$Platform == "Pypi"' dependencies-1.4.0-2018-12-22.csv | wc -l
  489010
 ```
 , a 3-orders-of-magnitude reduction in data!
@@ -31,13 +30,13 @@ $ mlr --icsv --opprint filter '$Platform == "Pypi"' dependencies.csv | wc -l
  - `versions.csv`:
 There are
 ```bash
-$ mlr --icsv --opprint filter '$Platform == "Pypi"' then uniq -n -g "ID" versions.csv
+$ mlr --icsv --opprint filter '$Platform == "Pypi"' then uniq -n -g "ID" versions-1.4.0-2018-12-22.csv
  1242096
 ```
 versions of some project on Pypi, and
 
 ```bash
-$ mlr --icsv --opprint filter '$Platform == "Pypi"' then uniq -n -g "Project ID" versions.csv
+$ mlr --icsv --opprint filter '$Platform == "Pypi"' then uniq -n -g "Project ID" versions-1.4.0-2018-12-22.csv
  162874
 ```
 project IDs corresponding to those versions on Pypi, which works out to
