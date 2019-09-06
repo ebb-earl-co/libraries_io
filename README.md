@@ -22,11 +22,11 @@ We track over **2.7m** unique open source packages, **33m** repositories and **2
 interdependencies between [sic] them. This gives Libraries.io a unique understanding of 
 open source software. An understanding that we want to share with **you**.
 
-#### Exploring Open Data Snapshot to Save API Calls
+#### Using Open Data Snapshot to Save API Calls
 Libraries.io has an easy-to-use [API](https://libraries.io/api), but
 given that PyPi is the fourth-most-represented package manager in the Open Data
 with 200,000+ packages, the number of API calls to various endpoints to collate 
-the necessary data is not appealing (Libraries.io rate limits to 60 requests
+the necessary data is not appealing (also, Libraries.io rate limits to 60 requests
 per minute). Fortunately, [Jeremy Katz on Zenodo](https://zenodo.org/record/2536573)
 maintains snapshots of the Libraries.io Open Data source. The most recent
 version is a snapshot from 22 December 2018, and contains the following CSV files:
@@ -41,7 +41,7 @@ version is a snapshot from 22 December 2018, and contains the following CSV file
 More information about these CSVs is in the `README` file included in the Open
 Data tar.gz, copied [here](https://github.com/ebb-earl-co/libraries_io/blob/master/data/README).
 There is a substantial reduction in the data when subsetting these CSVs just
-to the data pertaining to Pypi; find the code I used to subset them and the
+to the data pertaining to Pypi; find the code used to subset them and the
 size comparisons [here](https://github.com/ebb-earl-co/libraries_io/blob/master/data/pypi_subsetting.md).
 
 **WARNING**: The tar.gz file that contains these data is 12 GB itself, and
@@ -65,7 +65,7 @@ Terminology that will be useful going forward:
   - `Jane Doe` and `John Smith` are __nodes__ (equivalently: __vertexes__)
   - The above two nodes have __label__ `Person`, with __property__ `name`
   - The line that connects the nodes is an __relationship__ (equivalently: __edge__)
-  - The above relationship is of type `KNOWS`
+  - The above relationship is of __type__ `KNOWS`
   - `KNOWS`, and all Neo4j relationships, are __directed__; i.e. `Jane Doe`
   knows `John Smith`, but not the converse
 
@@ -79,7 +79,7 @@ screenshot above is taken from the Neo4j Browser, a really nice interactive
 query interface as well as visual query result.
 ### Making a Graph of CSV Data
 [Importing from CSV](https://neo4j.com/docs/cypher-manual/3.5/clauses/load-csv/)
-is one of the most common ways to create a Neo4j graph, and is how we will
+is the most common way to populate a Neo4j graph, and is how we will
 proceed given that the Open Data snapshot un`tar`s into CSV files. However,
 first a data model is necessary— what the entities that will be
 represented as labelled nodes with properties and the relationships 
@@ -92,3 +92,28 @@ In the case of the Libraries.io data, the following is the data model
 (produced with the [Arrow Tool](https://www.apcjones.com/arrow)):
 
 ![data model](arrows.svg)
+
+#### Database Constraints
+Analogously to primary key, foreign key, uniquness, and other constraints
+in a relational database, Neo4j has 
+[uniqueness constraint](https://neo4j.com/docs/cypher-manual/3.5/schema/constraints/#query-constraint-unique-nodes)
+which is very useful in constraining the number of nodes created. Basically,
+it isn't useful or performant to have two different nodes representing the
+platform Pypi because it is a unique entity. Moreover, uniqueness constraints
+enable 
+[more performant queries](https://neo4j.com/docs/cypher-manual/3.5/clauses/merge/#query-merge-using-unique-constraints).
+The following
+[Cypher commands](https://github.com/ebb-earl-co/libraries_io/blob/master/cypher/schema.cypher)
+add uniquness constraints on the properties of the nodes that should be unique
+in this data paradigm:
+```cypher
+CREATE CONSTRAINT on (platform:Platform) ASSERT platform.name IS UNIQUE;
+CREATE CONSTRAINT ON (project:Project) ASSERT project.name IS UNIQUE;
+CREATE CONSTRAINT ON (project:Project) ASSERT project.ID IS UNIQUE;
+CREATE CONSTRAINT ON (version:Version) ASSERT version.ID IS UNIQUE;
+CREATE CONSTRAINT ON (language:Language) ASSERT language.name IS UNIQUE;
+```
+All of the `ID` properties come from the first column of the CSVs and are 
+ostensibly primary key values. The `name` property of `Project` nodes is
+also constrained to be unique so that queries seeking to match nodes on
+the property name— the way that we think of them— are performant as well.
