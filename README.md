@@ -40,7 +40,7 @@ of the Libraries.io Open Data source. The most recent version is a snapshot from
 
 **WARNING**: The tar.gz file that contains these data is 12 GB itself, and
 once downloaded takes quite a while to un`tar`; once expanded, the data
-take up GB on disk.
+take up 64 GB on disk!
 
 ### Graph Databases, Starring Neo4j
 Because of the interconnected nature of software packages (dependencies,
@@ -71,3 +71,10 @@ first a data model is necessary— what the entities that will be
 represented as labelled nodes with properties, and what are the
 relationships among them are going to be. Moreover, some settings of Neo4j
 will have to be customized for proper and timely import from CSV.
+#### Data Model
+Basically, when working within a data paradigm, the nouns become nodes and
+how the nouns interact (the verbs) become the relationships. In the case of
+the Libraries.io data, the following is the data model (produced with the
+[Arrow Tool](https://www.apcjones.com/arrow)):
+
+![data model](arrows.svg)
