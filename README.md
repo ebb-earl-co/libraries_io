@@ -93,9 +93,16 @@ In the case of the Libraries.io data, the following is the data model
 
 ![data model](arrows.svg)
 
+So, a `Platform` `HOSTS` a `Project`, which `IS_WRITTEN_IN` a `Language`,
+and `HAS_VERSION` `Version`. With respect to `Version`s, the diagram encodes
+a design choice of the graph: despite different versions of different projects
+depending on particular versions of other projects, most of the dependencies
+are encoded with the value `*` which signifies "any version of package `foo`".
+Thus, it would be unwieldy, and in certain cases impossible, to recover the
+exact version of a dependence used by each version of each project. 
+
 #### Database Constraints
-Analogously to primary key, foreign key, uniquness, and other constraints
-in a relational database, Neo4j has 
+Analogously to the unique constraint in a relational database, Neo4j has a
 [uniqueness constraint](https://neo4j.com/docs/cypher-manual/3.5/schema/constraints/#query-constraint-unique-nodes)
 which is very useful in constraining the number of nodes created. Basically,
 it isn't useful or performant to have two different nodes representing the
