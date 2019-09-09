@@ -64,7 +64,7 @@ $ mlr --csv rename 'Created Timestamp,Created_Timestamp,Updated Timestamp,Update
 
  - `dependencies-1.4.0-2018-12-22.csv`
 ```bash
-$ mlr --csv rename 'Project Name,Project_Name,Project ID,Project_ID,Version Number,Version_Number,Version ID,Version_ID,Dependency Name,Dependency_Name,Dependency Platform,Dependency_Platform,Dependency Kind,Dependency_Kind,Optional Dependency,Optional_Dependency,Dependency Requirements,Dependency_Requirements,Dependency Project ID,Dependency_Project_ID' then filter '$Platform == "Pypi"' dependencies-1.4.0-2018-12-22.csv > pypi_dependencies.csv
+$ mlr --csv rename 'Project Name,Project_Name,Project ID,Project_ID,Version Number,Version_Number,Version ID,Version_ID,Dependency Name,Dependency_Name,Dependency Platform,Dependency_Platform,Dependency Kind,Dependency_Kind,Optional Dependency,Optional_Dependency,Dependency Requirements,Dependency_Requirements,Dependency Project ID,Dependency_Project_ID' then filter '$Platform == "Pypi" && $Dependency_Platform == "Pypi"' dependencies-1.4.0-2018-12-22.csv > pypi_dependencies.csv
 ```
 
  - `versions-1.4.0-2018-12-22.csv`
