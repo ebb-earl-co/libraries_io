@@ -71,3 +71,7 @@ $ mlr --csv rename 'Project Name,Project_Name,Project ID,Project_ID,Version Numb
 ```bash
 $ mlr --csv rename 'Project Name,Project_Name,Project ID,Project_ID,Published Timestamp,Published_Timestamp,Created Timestamp,Created_Timestamp,Updated Timestamp,Updated_Timestamp' then filter '$Platform == "Pypi"' then cut -x -f "Platform" versions-1.4.0-2018-12-22.csv > pypi_versions.csv
 ```
+
+ - `projects-with-repository`
+```bash
+```
