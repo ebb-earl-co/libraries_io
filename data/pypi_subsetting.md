@@ -59,7 +59,7 @@ the below, the three operations:
 
  - `projects-1.4.0-2018-12-22.csv'
 ```bash
-$ mlr --csv rename 'Created Timestamp,Created_Timestamp,Updated Timestamp,Updated_Timestamp,Homepage URL,Homepage_URL,Repository URL,Repository_URL,Versions Count,Versions_Count,Latest Release Publish Timestamp,Latest_Release_Publish_Timestamp,Latest Release Number,Latest_Release_Number,Package Manager ID,Package_Manager_ID,Dependent Projects Count,Dependent_Projects_Count,Last synced Timestamp,Last_Synced_Timestamp,Dependent Repositories Count,Dependent_Repositories_Count,Repository ID,Repository_ID' projects-1.4.0-2018-12-22.csv then filter '$Platform == "Pypi"' > pypi_projects.csv
+$ mlr --csv rename 'Created Timestamp,Created_Timestamp,Updated Timestamp,Updated_Timestamp,Homepage URL,Homepage_URL,Repository URL,Repository_URL,Versions Count,Versions_Count,Latest Release Publish Timestamp,Latest_Release_Publish_Timestamp,Latest Release Number,Latest_Release_Number,Package Manager ID,Package_Manager_ID,Dependent Projects Count,Dependent_Projects_Count,Last synced Timestamp,Last_Synced_Timestamp,Dependent Repositories Count,Dependent_Repositories_Count,Repository ID,Repository_ID' then filter '$Platform == "Pypi"' projects-1.4.0-2018-12-22.csv > pypi_projects.csv
 ```
 
  - `dependencies-1.4.0-2018-12-22.csv`
