@@ -18,7 +18,7 @@ $ mlr --icsv --opprint filter '$Platform == "Pypi"' projects-1.4.0-2018-12-22.cs
 
  - `dependencies-1.4.0-2018-12-22.csv`: 
 ```bash
-$ wc -l /Volumes/MEMORIA/libraries/dependencies.csv
+$ wc -l /Volumes/MEMORIA/libraries/dependencies-1.4.0-2018-12-22.csv
  105811885
 ```
 records. However, those that pertain to Pypi only number
