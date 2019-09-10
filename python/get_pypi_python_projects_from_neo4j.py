@@ -77,13 +77,13 @@ def main(argv=None):
         argv = sys.argv
 
     if '-h' in argv or '--help' in argv:
-        print(__doc__ % argv[0], sys.stderr)
+        print(__doc__ % argv[0], file=sys.stderr)
         return 0
 
     try:
         query = argv[1]
     except IndexError:
-        print("No Cypher query passed", sys.stderr)
+        print("No Cypher query passed", file=sys.stderr)
         return 1
 
     authentication = ('neo4j', getpass('Graph DB password:'))
@@ -92,11 +92,11 @@ def main(argv=None):
             result = execute_cypher_query(driver, query)
         except CypherError as c:
             to_return = json.dumps({"CypherError": str(c)})
-            print("Cypher error occurred", sys.stderr)
+            print("Cypher error occurred", file=sys.stderr)
             return to_return
         except Exception as e:
             to_return = json.dumps({"Exception": str(e)})
-            print("Exception occurred", sys.stderr)
+            print("Exception occurred", file=sys.stderr)
             return to_return
         else:
             to_return = (record.get('p').get('name') for record in result.records())

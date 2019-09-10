@@ -71,13 +71,13 @@ def main(argv=None):
         argv = sys.argv
 
     if '-h' in argv or '--help' in argv:
-        print(__doc__ % argv[0], sys.stderr)
+        print(__doc__ % argv[0], file=sys.stderr)
         return 0
 
     try:
         project_name = argv[1]
     except IndexError:
-        print("Project name not passed", sys.stderr)
+        print("Project name not passed", file=sys.stderr)
         return 1
 
     # Requesting from API
