@@ -18,8 +18,10 @@ from requests.exceptions import HTTPError
 import json
 import os
 import sys
+from collections import namedtuple
 
 URL = "https://libraries.io/api/Pypi/%s/contributors"
+error_and_content = namedtuple('ErrorAndContent', ['error', 'content'])
 
 
 def build_GET_request(url):
@@ -49,16 +51,18 @@ def execute_GET_request(r):
     Args:
         r (requests.get): instantiated request object
     Returns:
-        (str): JSON-formatted string
+        (namedtuple): tuple with first field: error, second: response content
     """
     try:
         r.raise_for_status()
     except HTTPError as h:
-        to_return = json.dumps({"HTTPError": str(h)})
+        to_return = error_and_content(json.dumps({"HTTPError": str(h)}),
+                                      None)
     except Exception as e:
-        to_return = json.dumps({"Exception": str(e)})
+        to_return = error_and_content(json.dumps({"Exception": str(e)}),
+                                      None)
     else:
-        to_return = json.dumps({"data": json.loads(r.content)})
+        to_return = error_and_content(None, r.content)
     finally:
         r.close()
 
