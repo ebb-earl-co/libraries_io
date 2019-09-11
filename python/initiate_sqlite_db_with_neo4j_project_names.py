@@ -13,22 +13,24 @@ from get_pypi_python_projects_from_neo4j import \
     getpass, get_neo4j_driver, execute_cypher_query, URI
 
 
-def populate_sqlite_project_names(db, table, names):
-    """ Given a sqlite database, table name, and iterable of project names,
-    insert into `db`.`table` the `names`. This is a single-use utility to
-    populate DB for the first time.
+def populate_sqlite_project_names(conn, db, table, names):
+    """ Given a sqlite connection, database, table name, and iterable of
+    project names, insert into `db`.`table` the `names`. This is a
+    single-use utility to populate DB for the first time.
     """
     to_insert = [(name, 0, None, None, None, None) for name in names]
     try:
-        with connect(db) as conn:
-            conn.executemany("insert into project_names(project_name, "
-                             "api_has_been_queried, api_query_succeeded, "
-                             "execution_error, contributors, ts) "
-                             "values (?, ?, ?, ?, ?, ?)", to_insert)
+        cur = conn.cursor()
+        cur.executemany("insert into project_names(project_name, "
+                        "api_has_been_queried, api_query_succeeded, "
+                        "execution_error, contributors, ts) "
+                        "values (?, ?, ?, ?, ?, ?)", to_insert)
     except (IntegrityError, OperationalError):
         raise
     else:
-        return
+        return cur.rowcount
+    finally:
+        cur.close()
 
 
 def return_parser():
@@ -42,9 +44,6 @@ def return_parser():
         'Libraries.io API key, set the ENV variables `GRAPHDBPASS` and `APIKEY`'
         ', respectively'
     )
-    # parser.add_argument('project_names_file', type=FileType('r'),
-    #                     help='The file containing the names of projects to the '
-    #                     'project contributors endpoint of the Libraries.io API')
     parser.add_argument('DB', type=str,
                         help='The sqlite DB containing project_names that have '
                         'been queried and those yet to be sent to Libraries.io '
@@ -52,9 +51,9 @@ def return_parser():
     parser.add_argument('table', type=str,
                         help='The name of the table in the sqlite DB specified '
                         'in the `project_names_DB` argument')
-    parser.add_argument('neo4j_URI', type=str, default=URI,
+    parser.add_argument('--neo4j_URI', type=str, default=URI, required=False,
                         help='The address at which Neo4j service is running')
-    parser.add_argument('neo4j_user', type=str, default='neo4j',
+    parser.add_argument('--neo4j_user', type=str, default='neo4j', required=False,
                         help='The user of the DB running at above address')
 
     return parser
@@ -70,7 +69,7 @@ def main():
     driver = get_neo4j_driver(args.neo4j_URI,
                               (args.neo4j_user, args.graphdbpassword))
     print(f"Driver for Neo4j graph running at {args.neo4j_URI} "
-          "instantiated to execute queries as user {args.neo4j_user}\n",
+          f"instantiated to execute queries as user {args.neo4j_user}\n",
           file=sys.stderr)
 
     cypher_query = ("MATCH (p:Project)-[:IS_WRITTEN_IN]->"
@@ -82,10 +81,18 @@ def main():
                      for record in cypher_result.records()]
     print(f"Cypher query resulted in {len(project_names)} records\n",
           file=sys.stderr)
-    return json.dump(str(project_names), sys.stdout)
 
     # Connect to sqlite
-    # conn = connect(args.DB)
+    print(f"Inserting these {len(project_names)} records into "
+          f"{args.DB}.{args.table}", file=sys.stderr)
+    with connect(args.DB) as conn:
+        names_inserted = populate_sqlite_project_names(conn,
+                                                       args.DB,
+                                                       args.table,
+                                                       project_names)
+    print(f"{names_inserted} records inserted into {args.DB}.{args.table}",
+          file=sys.stderr)
+    return 0
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
