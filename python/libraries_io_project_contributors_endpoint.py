@@ -16,12 +16,14 @@ from requests import get as GET
 from requests.exceptions import HTTPError
 
 import json
+import logging
 import os
 import sys
 from collections import namedtuple
 
+logger = logging.getLogger("root")
 URL = "https://libraries.io/api/Pypi/%s/contributors"
-error_and_content = namedtuple('ErrorAndContent', ['error', 'content'])
+content_and_error = namedtuple("ContentAndError", ["content", "error"])
 
 
 def build_GET_request(url):
@@ -36,6 +38,10 @@ def build_GET_request(url):
     """
     def get_api_key():
         api_key = os.environ.get("APIKEY")
+        if api_key is None:
+            logger.error("'APIKEY' is not among environment variables!")
+            sys.exit(1)
+
         return api_key
 
     params = {"api_key": get_api_key()}
@@ -56,13 +62,16 @@ def execute_GET_request(r):
     try:
         r.raise_for_status()
     except HTTPError as h:
-        to_return = error_and_content(json.dumps({"HTTPError": str(h)}),
-                                      None)
+        logger.warning(f"Requests threw an exception: {str(h)}")
+        to_return = content_and_error(None,
+                                      json.dumps({"HTTPError": str(h)}))
     except Exception as e:
-        to_return = error_and_content(json.dumps({"Exception": str(e)}),
-                                      None)
+        logger.warning(f"Exception occurred: {str(e)}")
+        to_return = content_and_error(None,
+                                      json.dumps({"Exception": str(e)}))
     else:
-        to_return = error_and_content(None, r.content)
+        logger.info(f"Request to {r.split('?')[0]} was successful")
+        to_return = content_and_error(r.content, None)
     finally:
         r.close()
 

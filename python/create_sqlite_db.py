@@ -15,29 +15,27 @@ def main(argv=None):
         print("Database name not passed", file=sys.stderr)
         return 1
 
-    conn = connect(dbname)
-
-    c = conn.cursor()
-    try:
-        c.execute("""create table project_names (
-            project_name text unique not null,
-            api_has_been_queried integer,
-            api_query_succeeded integer,
-            execution_error text,
-            contributors blob,
-            ts timestamp)""")
-    except OperationalError:
-        print("Table has already been created", file=sys.stderr)
-        return 0
-    except Exception as e:
-        print(str(e), file=sys.stderr)
-        return 1
-    else:
-        print("Table created successfully", file=sys.stderr)
-        return 0
-    finally:
-        c.close()
-        conn.close()
+    with connect(dbname) as conn:
+        c = conn.cursor()
+        try:
+            c.execute("""create table project_names (
+                project_name text unique not null,
+                api_has_been_queried integer,
+                api_query_succeeded integer,
+                execution_error text,
+                contributors blob,
+                ts timestamp)""")
+        except OperationalError:
+            print("Table has already been created", file=sys.stderr)
+            return 0
+        except Exception as e:
+            print(str(e), file=sys.stderr)
+            return 1
+        else:
+            print("Table created successfully", file=sys.stderr)
+            return 0
+        finally:
+            c.close()
 
 if __name__ == "__main__":
     sys.exit(main())

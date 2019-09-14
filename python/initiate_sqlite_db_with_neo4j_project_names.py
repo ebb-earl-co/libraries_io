@@ -35,10 +35,7 @@ def populate_sqlite_project_names(conn, db, table, names):
 
 def return_parser():
     parser = ArgumentParser(
-        description='Send GET requests to Libraries.io API, respecting rate '
-        'limit.\nIf list of package names to query is not specified, Neo4j '
-        'running\nat address specified in first argument will be queried for '
-        'said list.\n',
+        description='Query local Neo4j database and insert into local sqlite',
         formatter_class=RawTextHelpFormatter,
         epilog='N.b. to avoid being prompted for Graph DB password and '
         'Libraries.io API key, set the ENV variables `GRAPHDBPASS` and `APIKEY`'

@@ -55,23 +55,6 @@ def execute_cypher_query(driver, query, params=None):
         return result
 
 
-def return_iterator_of_node_properties(res, prop):
-    """ Given `neo4j.BoltStatementResult` object, return the
-    property `property` of each node in `res` as an iterator.
-    If `res` is empty or upon error, output is `iter()`.
-
-    Args:
-        res (neo4j.BoltStatementResult): result of query
-        prop (str): property to get from Neo4j node(s) in `res`
-    Returns:
-        (iterator): `node.property for node in res` or `iter()`
-    """
-    if res.peek() is None:
-        return iter(())
-    else:
-        return (record.get(prop) for record in res.records())
-
-
 def main(argv=None):
     if argv is None:
         argv = sys.argv
