@@ -66,8 +66,7 @@ def main(argv=None):
     try:
         query = argv[1]
     except IndexError:
-        print("No Cypher query passed", file=sys.stderr)
-        return 1
+        sys.exit("No Cypher query passed")
 
     authentication = ('neo4j', getpass('Graph DB password:'))
     with closing(get_neo4j_driver(URI, authentication)) as driver:
@@ -82,7 +81,8 @@ def main(argv=None):
             print("Exception occurred", file=sys.stderr)
             return to_return
         else:
-            to_return = (record.get('p').get('name') for record in result.records())
+            names = (record.get('p').get('name') for record in result.records())
+            return json.dumps(names)
 
         return json.dumps(list(to_return))
 

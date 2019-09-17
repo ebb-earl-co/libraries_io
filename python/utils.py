@@ -5,7 +5,7 @@ import logging
 from argparse import ArgumentParser, RawTextHelpFormatter
 
 from get_pypi_python_projects_from_neo4j import URI
-from sqlite3 import connect, IntegrityError, OperationalError
+from sqlite3 import connect, IntegrityError, OperationalError, Row
 
 
 def return_parser():
@@ -31,10 +31,10 @@ def return_parser():
     p.add_argument("-l", "--log", dest="log_level", default='INFO',
                    choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                    help="Set the logging level; default: %(default)s")
-    p.add_argument('--neo4j_URI', type=str, default=URI, required=False,
-                   help='The address at which Neo4j service is running')
-    p.add_argument('--neo4j_user', type=str, default='neo4j', required=False,
-                   help='The user of the DB running at above address')
+    # p.add_argument('--neo4j_URI', type=str, default=URI, required=False,
+    #                help='The address at which Neo4j service is running')
+    # p.add_argument('--neo4j_user', type=str, default='neo4j', required=False,
+    #                help='The user of the DB running at above address')
     p.add_argument('--logfile', type=str, required=False,
                    help='The log file to which to write logging')
     p.add_argument('--logfile_level', type=str, required=False, default='DEBUG',
@@ -62,19 +62,19 @@ def craft_sqlite_project_names_record(project_name,
 
 
 def insert_into_sqlite(conn, query, params=None):
-    logger = logging.getLogger('root')
     execute_args = (query, params) if params is not None else (query,)
     try:
         cur = conn.cursor()
         cur.execute(*execute_args)
     except (IntegrityError, OperationalError):
-        logger.error('SQLite error occurred; rolling back', exc_info=True)
-        cur.rollback()
+        logging.error('SQLite error occurred; rolling back', exc_info=True)
+        conn.rollback()
     except:
-        logger.error('Exception occurred; rolling back', exc_info=True)
-        cur.rollback()
+        logging.error('Exception occurred; rolling back', exc_info=True)
+        conn.rollback()
     else:
-        cur.commit()
+        conn.commit()
+        logging.info(f'Inserted {cur.rowcount} records')
     finally:
         cur.close()
     return
@@ -82,23 +82,24 @@ def insert_into_sqlite(conn, query, params=None):
 
 # TODO: fix this not returning results for whatever reason :(
 def select_from_sqlite(conn, query, params=None, num_retries=3):
-    logger = logging.getLogger('root')
     execute_args = (query, params) if params is not None else (query,)
-    for i in range(num_retries, 1):
+    for i in range(num_retries + 1):
         try:
             cur = conn.cursor()
             cur.execute(*execute_args)
         except (IntegrityError, OperationalError):
-            logger.error(f'SQLite error occurred (retry {i}):', exc_info=True)
+            logging.error(f'SQLite error occurred (retry {i}):', exc_info=True)
             continue
         except:
-            logger.error(f'Exception occurred (retry {i}):', exc_info=True)
+            logging.error(f'Exception occurred (retry {i}):', exc_info=True)
             continue
         else:
             result = cur.fetchall()
-            logger.info("Fetched %d records" % len(result))
+            logging.info(f"Fetched {len(result)} records")
             return result
         finally:
             cur.close()
     else:
+        logging.warning("Could not execute SELECT query successfully "
+                        f"even after {num_retries} retries")
         return
