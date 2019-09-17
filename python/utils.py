@@ -42,7 +42,7 @@ def return_parser():
     return p
 
 
-def craft_sqlite_project_names_record(project_name,
+def craft_sqlite_project_names_update(project_name,
                                       api_has_been_queried,
                                       api_query_succeeded,
                                       execution_error,
@@ -52,13 +52,13 @@ def craft_sqlite_project_names_record(project_name,
     return a tuple of the parameterized insert statement and the record
     to pass to sqlite3.Connection.cursor.execute()
     """
-    insert_query = ("insert into project_names(project_name, "
-                    "api_has_been_queried, api_query_succeeded, "
-                    "execution_error, contributors, ts) "
-                    "values (?, ?, ?, ?, ?, ?)")
-    return (insert_query,
-            (project_name, api_has_been_queried, api_query_succeeded,
-             execution_error, contributors, ts))
+    update_query = f"""UPDATE project_names SET
+                    api_has_been_queried={api_has_been_queried},
+                    api_query_succeeded={api_query_succeeded},
+                    execution_error={execution_error},
+                    contributors={contributors},
+                    ts={ts} WHERE project_name={project_name}"""
+    return update_query
 
 
 def insert_into_sqlite(conn, query, params=None):

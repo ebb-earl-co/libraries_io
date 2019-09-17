@@ -14,7 +14,7 @@ from time import sleep
 from libraries_io_project_contributors_endpoint import \
     build_GET_request, execute_GET_request, URL
 from logger import return_logger
-from utils import (connect, craft_sqlite_project_names_record, return_parser,
+from utils import (connect, craft_sqlite_project_names_update, return_parser,
                    select_from_sqlite, insert_into_sqlite, Row)
 
 
@@ -24,22 +24,20 @@ def main(args):
 
     logger.debug(f"Arguments passed:\n{args}")
 
-    select_query = """select project_name from ?
-    where api_query_succeeded is null LIMIT ?"""
-    query_params = (args.table, args.batch_size)
+    select_query = f"""select project_name as name from {args.table}
+    where api_query_succeeded is null LIMIT {args.batch_size}"""
 
     with connect(args.DB) as conn:
         conn.row_factory = Row
         logger.debug(f"Created connection to sqlite DB {args.DB}")
-        project_names_query_result = \
-            select_from_sqlite(conn, select_query, params=query_params)
+        project_names_query_result = select_from_sqlite(conn, select_query)
         project_names = [row['name'] for row in project_names_query_result]
         for project_name in project_names:
             try:
                 GET_request = build_GET_request(URL % project_name)
                 content_and_error = execute_GET_request(GET_request)
                 if content_and_error.error is None:
-                    sqlite_execute_tuple = craft_sqlite_project_names_record(
+                    sqlite_update_query = craft_sqlite_project_names_update(
                         project_name=project_name,
                         api_has_been_queried=1,
                         api_query_succeeded=1,
@@ -48,7 +46,7 @@ def main(args):
                         ts=datetime.now()
                     )
                 else:
-                    sqlite_execute_tuple = craft_sqlite_project_names_record(
+                    sqlite_update_query = craft_sqlite_project_names_update(
                         project_name=project_name,
                         api_has_been_queried=1,
                         qpi_query_succeeded=0,
@@ -56,16 +54,16 @@ def main(args):
                         contributors=None,
                         ts=datetime.now()
                     )
-                logger.debug(f"Inserting record corresponding to '{project_name}'"
-                             f": {sqlite_execute_tuple}")
-                insert_into_sqlite(conn, *sqlite_execute_tuple)
+                logger.debug(f"Updating record corresponding to '{project_name}'"
+                             f": {sqlite_update_query}")
+                insert_into_sqlite(conn, sqlite_update_query)
                 logger.info(f"Record corresponding to '{project_name}' "
-                            "inserted successfully")
+                            "updated successfully")
             except:
                 logger.error(f"Exception occurred for project {project_name}",
                              exc_info=True)
         else:
-            logger.info
+            logger.info(f"Project names\n{project_names}\ninserted successfully")
             sys.exit(0)
 
 if __name__ == "__main__":
