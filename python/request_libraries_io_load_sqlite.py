@@ -7,8 +7,6 @@ to sqlite. As the API rate limits to 60 per minute, 60 or fewer API calls
 will be made at a time, with `time.sleep` called between batches.
 """
 
-import sys
-from datetime import datetime
 from time import sleep
 
 from libraries_io_project_contributors_endpoint import \
