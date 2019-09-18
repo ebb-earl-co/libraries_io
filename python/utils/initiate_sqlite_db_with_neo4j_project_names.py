@@ -59,7 +59,7 @@ def return_parser():
 def main():
     # Parse args and set up values
     args = return_parser().parse_args()
-    args.graphdbpassword = os.environ.get("GRAPHDBPASSWORD") \
+    args.graphdbpassword = os.environ.get("GRAPHDBPASS") \
         or getpass("Graph DB password:")
 
     # Query Neo4j for all Python projects
