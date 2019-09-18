@@ -5,7 +5,7 @@ import logging
 from argparse import ArgumentParser, RawTextHelpFormatter
 from sqlite3 import connect, IntegrityError, OperationalError, Binary, Row
 
-from get_pypi_python_projects_from_neo4j import URI
+from utils.get_pypi_python_projects_from_neo4j import URI
 
 logger = logging.getLogger(__name__)
 

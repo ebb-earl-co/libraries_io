@@ -9,11 +9,12 @@ will be made at a time, with `time.sleep` called between batches.
 
 from time import sleep
 
-from libraries_io_project_contributors_endpoint import \
-    build_GET_request, execute_GET_request, URL
 from logger import return_logger
-from utils import (connect, craft_sqlite_project_names_update, return_parser,
-                   select_from_sqlite, execute_sqlite_query, Binary, Row)
+from utils.libraries_io_project_contributors_endpoint import \
+    build_GET_request, execute_GET_request, URL
+from utils.utils import (connect, craft_sqlite_project_names_update,
+                         return_parser, select_from_sqlite,
+                         execute_sqlite_query, Binary, Row)
 
 
 def main(args, logger):
