@@ -16,10 +16,7 @@ from utils import (connect, craft_sqlite_project_names_update, return_parser,
                    select_from_sqlite, execute_sqlite_query, Binary, Row)
 
 
-def main(args):
-    logger = return_logger(__name__, args.log_level,
-                           args.logfile, args.logfile_level)
-
+def main(args, logger):
     logger.debug(f"Arguments passed:\n{args}")
 
     select_query = f"""select project_name as name from {args.table}
@@ -70,12 +67,16 @@ def main(args):
                              exc_info=True)
         else:
             logger.info(f"Project names\n{successfully_updated}\n"
-                        "updated successfully")
+                        "updated successfully: "
+                        f"{round(len(successfully_updated)/args.batch_size*100, 2)}%")
             return 0
 
 if __name__ == "__main__":
     args = return_parser().parse_args()
-    still_project_names_left = main(args)
+    logger = return_logger(__name__, args.log_level,
+                           args.logfile, args.logfile_level)
+
+    still_project_names_left = main(args, logger)
     while still_project_names_left != 1:
         sleep(args.time_to_sleep)
-        still_project_names_left = main(args)
+        still_project_names_left = main(args, logger)
