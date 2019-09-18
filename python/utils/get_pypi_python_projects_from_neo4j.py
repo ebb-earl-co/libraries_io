@@ -13,7 +13,7 @@ the error that occurred during the request is returned in JSON format to STDOUT.
 """
 
 from neo4j import DirectDriver
-from neo4j.exceptions import CypherError
+from neo4j.exceptions import CypherError, ServiceUnavailable
 
 from contextlib import closing
 from getpass import getpass
