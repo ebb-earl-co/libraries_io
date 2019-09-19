@@ -24,7 +24,7 @@ def return_parser():
                    'API.')
     p.add_argument('table', type=str,
                    help='The name of the table in the sqlite DB specified '
-                   'in the `project_names_DB` argument')
+                   'in the `DB` argument')
     p.add_argument('batch_size', type=int,
                    help='The amount of API calls to execute before sleeping; '
                    'n.b. the API has a rate limit of 60 per minute')
