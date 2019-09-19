@@ -37,6 +37,10 @@ def return_parser():
                    help='The log file to which to write logging')
     p.add_argument('--logfile_level', type=str, required=False, default='DEBUG',
                    help='The level of logging to write to `logfile`')
+    p.add_argument('--neo4j_URI', type=str, default=URI, required=False,
+                   help='The address at which Neo4j service is running')
+    p.add_argument('--neo4j_user', type=str, default='neo4j', required=False,
+                   help='The user of the DB running at above address')
     return p
 
 
