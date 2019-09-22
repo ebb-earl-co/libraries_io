@@ -24,8 +24,7 @@ def main(argv=None):
                 api_query_succeeded integer,
                 execution_error text,
                 contributors blob,
-                ts timestamp,
-                merge_contributors_succeeded int)""")
+                ts timestamp)""")
         except OperationalError:
             print("Table has already been created", file=sys.stderr)
             return 0
