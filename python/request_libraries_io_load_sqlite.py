@@ -69,7 +69,7 @@ def main(args, logger):
         else:
             logger.info(f"Project names\n{successfully_updated}\n"
                         "updated successfully: "
-                        f"{round(len(successfully_updated)/args.batch_size*100, 2)}%")
+                        f"{round(len(successfully_updated)/len(project_names)*100, 2)}%")
             return 0
 
 if __name__ == "__main__":
