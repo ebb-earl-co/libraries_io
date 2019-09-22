@@ -119,6 +119,7 @@ CREATE CONSTRAINT ON (project:Project) ASSERT project.name IS UNIQUE;
 CREATE CONSTRAINT ON (project:Project) ASSERT project.ID IS UNIQUE;
 CREATE CONSTRAINT ON (version:Version) ASSERT version.ID IS UNIQUE;
 CREATE CONSTRAINT ON (language:Language) ASSERT language.name IS UNIQUE;
+CREATE CONSTRAINT ON (contributor:Contributor) ASSERT contributor.uuid IS UNIQUE;
 ```
 All of the `ID` properties come from the first column of the CSVs and are 
 ostensibly primary key values. The `name` property of `Project` nodes is
