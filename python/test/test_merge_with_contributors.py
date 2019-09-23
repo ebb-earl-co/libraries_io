@@ -6,6 +6,7 @@ from string import printable
 from hypothesis import given, strategies as st
 import pytest as pt
 from py2neo import Graph
+from py2neo.database import Cursor
 
 from test_helpers.test_graph_database import TESTGRAPHDB, Language
 from merge_contributors_with_py2neo import *
@@ -39,6 +40,7 @@ def test_main_stderr_when_env_variable_not_set(monkeypatch, capsys):
 @pt.fixture(scope="function")
 def G():
     g = Graph(**TESTGRAPHDB)
+    return g
 
 
 @pt.fixture(scope="function")
@@ -57,10 +59,15 @@ def G_with_nodes():
 @given(st.just("MATCH (p:Project) return p;"))
 def test_execute_cypher_match_statement_empty_graph(G, statement):
     result = execute_cypher_match_statement(G, statement)
-    assert result is None
+    assert isinstance(result, Cursor)
 
 
 @given(st.just("MATCH (p:Project) return p;"))
 def test_execute_cypher_match_statement_non_empty_graph(G, statement):
     result = execute_cypher_match_statement(G, statement)
-    assert result is None
+    assert isinstance(result, Cursor)
+
+
+@given(st.just("MATCH (p:Project) return p;"))
+def test_return_Node_from_Cursor_empty_graph(G, statement):
+    assert 0
