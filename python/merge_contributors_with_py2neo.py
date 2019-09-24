@@ -41,7 +41,7 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    DB = argv[1]
+    DB, merged_contributors = argv[1:]
 
     g = Graph(password=get_graph_password())
 
@@ -60,35 +60,31 @@ def main(argv=None):
     # not tried to be merged yet; this involves getting the `contributors` field
     # from SQLite
 
-    projects_not_yet_tried_merge_query = python_projects_on_pypi_query % -1
+    projects_query =  python_projects_on_pypi_query % merged_contributors
     print("Querying Neo4j for nodes representing Python projects on Pypi\n",
           file=sys.stderr)
-    projects_not_yet_tried_merge__cursor = \
-        execute_cypher_match_statement(g, projects_not_yet_tried_merge_query)
+    projects_cursor = execute_cypher_match_statement(g, projects_query)
 
     print("Converting py2neo Cursor into generator of dicts\n", file=sys.stderr)
-    projects_not_yet_tried_merge__nodes = \
-        list(map(lambda r: r.get('p'), projects_not_yet_tried_merge__cursor))
+    projects_nodes =  list(map(lambda r: r.get('p'), projects_cursor))
 
     with connect(DB) as conn:
         conn.row_factory = Row
-        projects_not_yet_tried_merge__contributors = []
-        for node in projects_not_yet_tried_merge__nodes:
+        projects_contributors = []
+        for node in projects_nodes:
             cur = conn.cursor()
             name = node['name']
             print(f"SELECTing contributors from SQLite for project {name}\n",
                   file=sys.stderr)
             cur.execute(select_contributors_query, (name,))
             result = cur.fetchone()
-            projects_not_yet_tried_merge__contributors.append(
-                json.loads(result['contributors'])
-            )
+            projects_contributors.append(json.loads(result['contributors']))
             cur.close()
 
     # Phase 2: Create a (:Contributor) node for each key in the dict resulting
     # from json.loads().
-    for i, cs in enumerate(projects_not_yet_tried_merge__contributors):
-        project = projects_not_yet_tried_merge__nodes[i]
+    for i, cs in enumerate(projects_contributors):
+        project = projects_nodes[i]
         print(f"MERGEing contributors to Neo4j for project {project['name']}",
               file=sys.stderr)
         all_merged = (True,) if len(cs) == 0 else []
@@ -122,6 +118,7 @@ def main(argv=None):
             g.push(project)
     else:
         del g
+
 
 if __name__ == "__main__":
     main()
