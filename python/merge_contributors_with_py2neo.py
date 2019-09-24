@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import json
 import os
 import sys
-from functools import reduce
-from traceback import print_tb
 
-from py2neo import Graph, Node
-from py2neo.database import GraphError
+from py2neo import Graph, Node, Relationship
+
+from utils.utils import connect, Row
+
 
 GRAPHDBPASS = 'GRAPHDBPASS'
 
@@ -36,118 +37,91 @@ def execute_cypher_match_statement(g, statement, **kwargs):
     return cursor
 
 
-def update_Node_and_return(node, **kwargs):
-    """ Call `node`.update, inserting {k: v for k, v in kwargs.items()}
-    into the `node`'s internal values() dict. Returns `node`, udpated.
-    Args:
-        (node): py2neo.Node to update
-        (kwargs): key, value pairs of properties to add to `node`
-    Returns:
-        (node): `node` passed in with its internal properties changed
-    """
-    node.update(**kwargs)
-    return node
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
 
+    DB = argv[1]
 
-def return_Node_from_record(label, record):
-    """ Given a Neo4j node label, `label`, and a record,
-    `record`, return py2neo.Node instance of type `label` instantiated with
-    the `record`. E.g.
-    >>> # query = "MATCH (p:Person) RETURN p.name as name, p.age as age LIMIT 1"
-    >>> cursor = g.run(query)
-    >>> return_Node_from_record("Person", next(cursor))
-    (:Person {age: 42, name: 'John Doe'})
-    """
-    properties = dict(record)
-    n = Node(label, **properties)
-    return n
-
-
-def main():
-    pw = get_graph_password()
-    if pw is None:
-        print(f"Environment variable {GRAPHDBPASS} not set. Cannot access graph DB",
-              file=sys.stderr)
-        sys.exit(1)
-    else:
-        g = Graph(password=pw)
+    g = Graph(password=get_graph_password())
 
     python_projects_on_pypi_query = \
         """MATCH (:Language {name: 'Python'})
-        <-[:IS_WRITTEN_IN]-(p:Project)
+        <-[:IS_WRITTEN_IN]-(p:Project {merged_contributors: %d})
         <-[:HOSTS]-(:Platform {name: 'Pypi'})
         return p"""
 
-    tx = g.begin(autocommit=False)
+    select_contributors_query = \
+        """select project_name, contributors from project_names
+        where api_has_been_queried=1 and api_query_succeeded=1
+        and project_name=?"""
+
+    # Phase 1: get all project_names from Neo4j the contributors of which have
+    # not tried to be merged yet; this involves getting the `contributors` field
+    # from SQLite
+
+    projects_not_yet_tried_merge_query = python_projects_on_pypi_query % -1
     print("Querying Neo4j for nodes representing Python projects on Pypi\n",
           file=sys.stderr)
-    python_projects_on_pypi = \
-        execute_cypher_match_statement(g, python_projects_on_pypi_query)
+    projects_not_yet_tried_merge__cursor = \
+        execute_cypher_match_statement(g, projects_not_yet_tried_merge_query)
 
     print("Converting py2neo Cursor into generator of dicts\n", file=sys.stderr)
-    python_projects_on_pypi_nodes = \
-        map(lambda record: record.get('p'), python_projects_on_pypi)
+    projects_not_yet_tried_merge__nodes = \
+        list(map(lambda r: r.get('p'), projects_not_yet_tried_merge__cursor))
 
-    print("Setting the 'merged_contributors' property to -1 on py2neo.Node "
-          "objects representing Python projects\n", file=sys.stderr)
-    python_projects_on_pypi_nodes_property_set = \
-        map(lambda n: update_Node_and_return(n, merged_contributors=-1),
-            python_projects_on_pypi_nodes)
+    with connect(DB) as conn:
+        conn.row_factory = Row
+        projects_not_yet_tried_merge__contributors = []
+        for node in projects_not_yet_tried_merge__nodes:
+            cur = conn.cursor()
+            name = node['name']
+            print(f"SELECTing contributors from SQLite for project {name}\n",
+                  file=sys.stderr)
+            cur.execute(select_contributors_query, (name,))
+            result = cur.fetchone()
+            projects_not_yet_tried_merge__contributors.append(
+                json.loads(result['contributors'])
+            )
+            cur.close()
 
-    output_messages = ("\tProject '%s' updated UNSUCCESSFULLY\n",
-                       "\tProject '%s' updated SUCCESSFULLY\n")
-
-    num_successful, num_attempted = 0, 0
-    print("Attempting to push updates to remote graph\n",
-            file=sys.stderr)
-    for node in python_projects_on_pypi_nodes_property_set:
-        successful = 0
-        try:
-            tx.merge(node)
-        except GraphError as ge:
-            successful = 0
-            print_tb(ge)
-            continue
-        except Exception as e:
-            successful = 0
-            print_tb(e)
-            continue
+    # Phase 2: Create a (:Contributor) node for each key in the dict resulting
+    # from json.loads().
+    for i, cs in enumerate(projects_not_yet_tried_merge__contributors):
+        project = projects_not_yet_tried_merge__nodes[i]
+        print(f"MERGEing contributors to Neo4j for project {project['name']}",
+              file=sys.stderr)
+        all_merged = (True,) if len(cs) == 0 else []
+        # If there are no contributors for a project, the below `for` loop will
+        # be passed over, but the `else` clause will run; in that case, have
+        # all_merged be an iterable that is truthy for all() so as to demarcate
+        # correctly having merged all (zero) contributors
+        for j, c in enumerate(cs, 1):
+            contributor = Node("Contributor",
+                               uuid=int(c['uuid']),
+                               name=c['name'],
+                               github_id=c['github_id'],
+                               login=c['login'],
+                               host_type=c['host_type'])
+            print(f"\tAttempting to MERGE contributor {j}: {contributor}",
+                  file=sys.stderr)
+            g.merge(contributor, "Contributor", "uuid")
+        # Phase 3: Create a relationship between (:Project) and (:Contributor) for
+        # each contributor that is in the SQLite record according to `project_name`
+            cp = Relationship(contributor, "CONTRIBUTES_TO", project)
+            print(f"\tAttempting to CREATE relationship to contributor {j}: {cp}",
+                  file=sys.stderr)
+            g.create(cp)
+            all_merged.append(True if g.exists(cp) else False)
         else:
-            successful = 1
-            tx.commit()
-        finally:
-            num_successful += successful
-            num_attempted += 1
-            print(output_messages[successful] % node['name'], file=sys.stderr)
+            mc = 1 if all(all_merged) else 0
+            print(f"{'NOT ALL' if mc == 0 else 'ALL'} "
+                  f"contributors to {project['name']} MERGEd successfully",
+                  file=sys.stderr)
+            project.update(merged_contributors=mc)
+            g.push(project)
     else:
-        print(f"{round((num_successful / num_attempted) * 100, 2)}% "
-                "successfully pushed to remote graph")
-        del tx
-
-    # print("Combining the generator of py2neo.Node objects into a py2neo.Subgraph\n",
-    #       file=sys.stderr)
-    # python_projects_on_pypi_subgraph = \
-    #     reduce(lambda node1, node2: node1 | node2,  # union (set operation)
-    #            python_projects_on_pypi_nodes_property_set)
-    # with g.begin(autocommit=False) as tx:
-    #     print("Attempting to push these updates to remote graph\n",
-    #           file=sys.stderr)
-    #     try:
-    #         tx.push(next(python_projects_on_pypi_subgraph))  # is 1 Subgraph obj
-    #     except GraphError as ge:
-    #         tx.rollback()
-    #         print(f"Exception occurred:\n{ge}", file=sys.stderr)
-    #         sys.exit(1)
-    #     except Exception as e:
-    #         tx.rollback()
-    #         sys.exit(e)
-    #     else:
-    #         print("The 'merged_contributors' property of Nodes representing "
-    #               "Python projects on Pypi were updated successfully",
-    #               file=sys.stderr)
-    #         tx.commit()
-    # del g
-
+        del g
 
 if __name__ == "__main__":
     main()
