@@ -23,12 +23,14 @@
 13. Run `request_libraries_io_load_sqlite.py`, but querying for
 records that have `api_has_been_queried=1 AND api_query_succeeded=0`.
 Do as [12]
-14. Run `project_contributors_from_sqlite_to_neo4j.py`, using SQLite
+14. Run `merge_projects_with_py2neo.py /path/to/SQLite.db -1`, using SQLite
 records in which `api_has_been_queried=1 AND api_query_succeeded=1`.
-    a. Given a `project_name`, pick up its `contributors` field in 
-    SQLite. If this is empty, return None
-    b. If `contributors` is not empty, create a Neo4j driver
-    c. Run `merge_contributors.py` for the `project_name` and `contributors`, returning result of Cypher MERGE query for each contributor
-    d. If resulting dictionary has True value for `has_contributor_error`, rerun the project_name, contributor combo
-15. Run as-of-yet-undefined script to execute `MATCH-MATCH-MERGE` operation on project nodes and contributor nodes
+    a. Get all such project names, contributors
+    b. For each project, make a py2neo.Node for each of its contributors
+    c. For each contributor, merge that contributor then merge its relationship
+    with the project
+15. For the nodes that failed (14), they have property `merged_contributors=0`. So,
+run `merge_projects_with_py2neo.py /path/to/SQLite.db 0` in order to repeat the
+process from (14) for the Project nodes the contributors of which were not merged
+correctly.
 16. _Finally_, run query for degree centrality to find the most influential contributor to Pypi
