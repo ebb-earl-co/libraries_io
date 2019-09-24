@@ -60,7 +60,7 @@ def main(argv=None):
     # not tried to be merged yet; this involves getting the `contributors` field
     # from SQLite
 
-    projects_query =  python_projects_on_pypi_query % merged_contributors
+    projects_query =  python_projects_on_pypi_query % int(merged_contributors)
     print("Querying Neo4j for nodes representing Python projects on Pypi\n",
           file=sys.stderr)
     projects_cursor = execute_cypher_match_statement(g, projects_query)

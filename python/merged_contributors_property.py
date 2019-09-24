@@ -4,7 +4,6 @@
 import os
 import sys
 from traceback import print_tb
-
 from py2neo import Graph
 from py2neo.database import GraphError
 
@@ -26,7 +25,7 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    set_property_query_file = argv[1]
+    query_file = argv[1]
 
     pw = get_graph_password()
     if pw is None:
@@ -36,16 +35,16 @@ def main(argv=None):
     else:
         g = Graph(password=pw)
 
-    with open(set_property_query_file, 'r') as f:
-        set_merged_contributors_property_query = f.read()
+    with open(query_file, 'r') as f:
+        merged_contributors_property_query = f.read()
 
     try:
-        g.evaluate(set_merged_contributors_property_query)
+        g.evaluate(merged_contributors_property_query)
     except GraphError as ge:
         print_tb(ge)
         sys.exit(1)
     else:
-        print(f"Query\n{set_merged_contributors_property_query}\nexecuted successfully",
+        print(f"Query\n{merged_contributors_property_query}\nexecuted successfully",
               file=sys.stderr)
         sys.exit(0)
 
