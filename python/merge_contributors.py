@@ -1,88 +1,123 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import logging
+import json
+import os
+import sys
 
-from utils.get_pypi_python_projects_from_neo4j import \
-    get_neo4j_driver, getpass, CypherError, URI
-from utils.utils import ArgumentParser, RawTextHelpFormatter
+from py2neo import Graph, Node, Relationship
 
-logger = logging.getLogger(__name__)
+from utils.utils import connect, Row
 
 
-def merge_contributors(driver, merge_query, merge_query_params,
-                       match_query, match_query_params):
-    """ Using `neo4j.DirectDriver` object, attempt executing `merge_query`,
-    followed by `match_query`, that is formatted using `project_name` and
+GRAPHDBPASS = 'GRAPHDBPASS'
+
+
+def get_graph_password(env_variable_name=GRAPHDBPASS):
+    """ Get graph password that is set as ENV variable
+    Args:
+        env_variable_name (str): the environment variable to get
     Returns:
-        (dict): {`project_name`: [{contributor, successful, query, params}]}
+        the output of os.environ.get(env_variable_name, None)
     """
-    with driver.session() as s:
-        with s.begin_transaction() as tx:  # Execute the merge_query
-            successful = [None, None]
-            try:
-                merge_query_result = tx.run(merge_query, merge_query_params)
-            except CypherError:
-                logger.error("COULD NOT MERGE", exc_info=True)
-                tx.rollback()
-                return
-            except Exception:
-                logger.error("Exception occurred while executing\n"
-                             f"{merge_query}", exc_info=True)
-                tx.rollback()
-                return
-            else:
-                logger.debug("MERGE query successful for statement "
-                             f"\n{merge_query_result.summary().metadata['statement']}\n"
-                             "and parameters: "
-                             f"{merge_query_result.summary().metadata['parameters']}")
-                tx.commit()
-
-        with s.begin_transaction() as tx2:  # Execute match-match-merge query
-            try:
-                match_query_result = tx2.run(match_query, match_query_params)
-            except CypherError:
-                logger.error("COULD NOT MATCH-MATCH-MERGE", exc_info=True)
-                tx2.rollback()
-                return
-            except Exception:
-                logger.error("Exception occurred while execution\n"
-                             f"{match_query}", exc_info=True)
-                tx2.rollback()
-                return
-            else:
-                logger.debug("MATCH-MERGE query successful for statement "
-                             f"\n{match_query_result.summary().metadata['statement']}\n"
-                             "and parameters: "
-                             f"{merge_query_result.summary().metadata['parameters']}")
-                tx2.commit()
-
-        return 0
+    pw = os.environ.get(env_variable_name, None)
+    return pw
 
 
-def return_parser():
-    p = ArgumentParser(
-        description='This script loads data from Libraries.io API, stored in '
-        'SQLite in JSON format, to Neo4j by querying with the Python driver.',
-        formatter_class=RawTextHelpFormatter,
-        epilog='N.b. to avoid being prompted for Graph DB password, set the '
-        'ENV variable `GRAPHDBPASS`'
-    )
-    p.add_argument('DB', type=str,
-                   help='The sqlite DB containing project_names that have '
-                   'been queried and the API response')
-    p.add_argument('table', type=str,
-                   help='The name of the table in the sqlite DB specified '
-                   'in the `DB` argument')
-    p.add_argument("-l", "--log", dest="log_level", default='INFO',
-                   choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-                   help="Set the logging level; default: %(default)s")
-    p.add_argument('--logfile', type=str, required=False,
-                   help='The log file to which to write logging')
-    p.add_argument('--logfile_level', type=str, required=False, default='DEBUG',
-                   help='The level of logging to write to `logfile`')
-    p.add_argument('--neo4j_URI', type=str, default=URI, required=False,
-                   help='The address at which Neo4j service is running')
-    p.add_argument('--neo4j_user', type=str, default='neo4j', required=False,
-                   help='The user of the DB running at above address')
-    return p
+def execute_cypher_match_statement(g, statement, **kwargs):
+    """ Return the iterator of query results from `py2neo.Graph.run`
+    Args:
+        g (py2neo.Graph): the graph object representing DB to interact with
+        statement (str): the query to run on `g`
+        (kwargs): parameters that are inserted into `statement`
+    Returns:
+        (py2neo.database.Cursor): query results
+    """
+    cursor = g.run(statement, **kwargs)
+    return cursor
+
+
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+
+    DB, merged_contributors = argv[1:]
+
+    g = Graph(password=get_graph_password())
+
+    python_projects_on_pypi_query = \
+        """MATCH (:Language {name: 'Python'})
+        <-[:IS_WRITTEN_IN]-(p:Project {merged_contributors: %d})
+        <-[:HOSTS]-(:Platform {name: 'Pypi'})
+        return p"""
+
+    select_contributors_query = \
+        """select project_name, contributors from project_names
+        where api_has_been_queried=1 and api_query_succeeded=1
+        and project_name=?"""
+
+    # Phase 1: get all project_names from Neo4j the contributors of which have
+    # not tried to be merged yet; this involves getting the `contributors` field
+    # from SQLite
+    projects_query =  python_projects_on_pypi_query % int(merged_contributors)
+    print("Querying Neo4j for nodes representing Python projects on Pypi\n",
+          file=sys.stderr)
+    projects_cursor = execute_cypher_match_statement(g, projects_query)
+
+    print("Converting py2neo Cursor into generator of dicts\n", file=sys.stderr)
+    projects_nodes =  list(map(lambda r: r.get('p'), projects_cursor))
+
+    with connect(DB) as conn:
+        conn.row_factory = Row
+        projects_contributors = []
+        for node in projects_nodes:
+            cur = conn.cursor()
+            name = node['name']
+            print(f"SELECTing contributors from SQLite for project {name}\n",
+                  file=sys.stderr)
+            cur.execute(select_contributors_query, (name,))
+            result = cur.fetchone()
+            projects_contributors.append(json.loads(result['contributors']))
+            cur.close()
+
+    # Phase 2: Create a (:Contributor) node for each dict in the list resulting
+    # from json.loads().
+    for i, cs in enumerate(projects_contributors):
+        project = projects_nodes[i]
+        print(f"MERGEing contributors to Neo4j for project {project['name']}",
+              file=sys.stderr)
+        all_merged = (True,) if len(cs) == 0 else []
+        # If there are no contributors for a project, the below `for` loop will
+        # be passed over, but the `else` clause will run; in that case, have
+        # all_merged be an iterable that is truthy for all() so as to demarcate
+        # correctly having merged all (zero) contributors
+        for j, c in enumerate(cs, 1):
+            contributor = Node("Contributor",
+                               uuid=int(c['uuid']),
+                               name=c['name'],
+                               github_id=c['github_id'],
+                               login=c['login'],
+                               host_type=c['host_type'])
+            print(f"\tAttempting to MERGE contributor {j}: {contributor}",
+                  file=sys.stderr)
+            g.merge(contributor, "Contributor", "uuid")
+        # Phase 3: Create a relationship between (:Project) and (:Contributor) for
+        # each contributor that is in the SQLite record according to `project_name`
+            cp = Relationship(contributor, "CONTRIBUTES_TO", project)
+            print(f"\tAttempting to CREATE relationship to contributor {j}: {cp}",
+                  file=sys.stderr)
+            g.create(cp)
+            all_merged.append(True if g.exists(cp) else False)
+        else:
+            mc = 1 if all(all_merged) else 0
+            print(f"{'NOT ALL' if mc == 0 else 'ALL'} "
+                  f"contributors to {project['name']} MERGEd successfully",
+                  file=sys.stderr)
+            project.update(merged_contributors=mc)
+            g.push(project)
+    else:
+        del g
+
+
+if __name__ == "__main__":
+    main()

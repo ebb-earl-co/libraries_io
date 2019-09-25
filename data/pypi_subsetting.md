@@ -10,9 +10,9 @@ the sizes of the CSVs:
 $ wc -l projects-1.4.0-2018-12-22.csv
  3333927
 ``` 
-and after filtering for just Python packages on Pypi:
+and after filtering for just packages on Pypi:
 ```bash
-$ mlr --icsv --opprint filter '$Platform == "Pypi"' projects-1.4.0-2018-12-22.csv | wc -l
+$ mlr --csv filter '$Platform == "Pypi"' projects-1.4.0-2018-12-22.csv | wc -l
  172412
 ```
 
@@ -23,7 +23,7 @@ $ wc -l /Volumes/MEMORIA/libraries/dependencies-1.4.0-2018-12-22.csv
 ```
 records. However, those that pertain to Pypi only number
 ```bash
-$ mlr --icsv --opprint filter '$Platform == "Pypi"' dependencies-1.4.0-2018-12-22.csv | wc -l
+$ mlr --csv filter '$Platform == "Pypi"' dependencies-1.4.0-2018-12-22.csv | wc -l
  489010
 ```
 , a 3-orders-of-magnitude reduction in data!
