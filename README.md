@@ -83,7 +83,7 @@ size comparisons [here](https://github.com/ebb-earl-co/libraries_io/blob/master/
 once downloaded takes quite a while to un`tar`; once uncompressed, the data
 take up 64 GB on disk!
 
-![untar time](untar_tar_gz_file_time.png)
+![untar time](images/untar_tar_gz_file_time.png)
 
 ### Graph Databases, Starring Neo4j
 Because of the interconnected nature of software packages (dependencies,
@@ -96,7 +96,7 @@ and is the one that we will use for the analysis. Part of the reason for its pop
 is that its query language, [Cypher](https://neo4j.com/developer/cypher-query-language/),
 is expressive and simple:
 
-![example graph](example_graph.png)
+![example graph](images/example_graph.png)
 
 Terminology that will be useful going forward:
   - `Jane Doe` and `John Smith` are __nodes__ (equivalently: __vertexes__)
@@ -134,7 +134,7 @@ become nodes and how the nouns interact (the verbs) become the relationships.
 In the case of the Libraries.io data, the following is the data model
 (produced with the [Arrow Tool](https://www.apcjones.com/arrow)):
 
-![data model](arrows.svg)
+![data model](images/arrows.svg)
 
 So, a `Platform` `HOSTS` a `Project`, which `IS_WRITTEN_IN` a `Language`,
 and `HAS_VERSION` `Version`. Moreover, a `Project` `DEPENDS_ON` other 
@@ -169,7 +169,7 @@ Python-language Pypi packages, each of which sends one request to the
 [Contributors endpoint](https://libraries.io/api#project-contributors)
 of the Libraries.io API, at "maximum velocity", it will require
 
-![packages time to request](packages_time_to_request.png)
+![packages time to request](images/packages_time_to_request.png)
 
 to get contributor data for each project.
 
@@ -278,7 +278,7 @@ CALL apoc.cypher.runFile('/path/to/libraries_io/cypher/projects_apoc.cypher') yi
 The result of this set of queries is that the following portion of our graph
 is populated:
 
-![post-projects\_apoc](projects_apoc-cypher_result.png)
+![post-projects\_apoc](images/projects_apoc-cypher_result.png)
 #### Loading `Version`s
 Next are the `Version`s of the `Project`s. The source CSV for this type
 of node is [pypi\_versions.csv](https://github.com/ebb-earl-co/libraries_io/blob/master/data/pypi_subsetting.md#L72)
@@ -291,7 +291,7 @@ CALL apoc.cypher.runFile('/path/to/libraries_io/cypher/versions_apoc.cypher') yi
 The result of this set of queries is that the graph has grown to include
 the following nodes and relationships:
 
-![post-versions\_apoc](versions_apoc-cypher_result.png)
+![post-versions\_apoc](images/versions_apoc-cypher_result.png)
 #### Loading Dependencies among `Project`s and `Version`s
 Now that there are `Project` nodes and `Version` nodes, it's time to
 link their dependencies. The source CSV for these data is 
@@ -306,7 +306,7 @@ CALL apoc.cypher.runFile('/path/to/libraries_io/cypher/dependencies_apoc.cypher'
 The result of this set of queries is that the graph has grown to include
 the `DEPENDS_ON` relationship:
 
-![post-dependencies\_apoc](dependencies_apoc-cypher_result.png)
+![post-dependencies\_apoc](images/dependencies_apoc-cypher_result.png)
 #### Loading `Contributor`s
 Because the data corresponding to Python `Project` `Contributor`s was
 retrieved from the API, it is not run with Cypher from a file, but
@@ -314,13 +314,13 @@ in a Python script, particularly
 [this section](https://github.com/ebb-earl-co/libraries_io/blob/master/python/merge_contributors.py#L95-L127).
 After executing this process, the graph is now in its final form:
 
-![post-merge\_contributors](merge_contributors-py_result.png)
+![post-merge\_contributors](images/merge_contributors-py_result.png)
 ## Preliminary Results
 The below is the same image of the full schema, but with node and
 relationship counts instead of labels (the labels of nodes and
 relationships are color-coded still):
 
-![full\_graph\_counts](full_graph_counts.png)
+![full\_graph\_counts](images/full_graph_counts.png)
 
 On the way to understanding the most influential `Contributor`,
 it is useful to find the most influential `Project`. Intuitively,
