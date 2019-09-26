@@ -12,7 +12,10 @@ logger = logging.getLogger(__name__)
 
 def return_parser():
     p = ArgumentParser(
-        description='',
+        description='This script queries SQLite for projects that have '
+        'not yet queried the Libraries.io API and executes a GET request to '
+        'the Libraries.io API Contributors endpoint, storing the response '
+        'in SQLite.',
         formatter_class=RawTextHelpFormatter,
         epilog='N.b. to avoid being prompted for Graph DB password and '
         'Libraries.io API key, set the ENV variables `GRAPHDBPASS` and `APIKEY`'

@@ -7,21 +7,21 @@ import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
 from sqlite3 import connect, OperationalError, IntegrityError
 
-from libraries_io_project_contributors_endpoint import \
-    build_GET_request, execute_GET_request, URL
-from get_pypi_python_projects_from_neo4j import \
+from utils.get_pypi_python_projects_from_neo4j import \
     getpass, get_neo4j_driver, execute_cypher_query, URI
+from utils.libraries_io_project_contributors_endpoint import \
+    build_GET_request, execute_GET_request, URL
 
 
-def populate_sqlite_project_names(conn, db, table, names):
+def populate_sqlite_project_names(conn, table, names):
     """ Given a sqlite connection, database, table name, and iterable of
-    project names, insert into `db`.`table` the `names`. This is a
-    single-use utility to populate DB for the first time.
+    project names, insert into `table` the `names`. This is a single-use
+    utility to populate DB for the first time.
     """
     to_insert = [(name, 0, None, None, None, None) for name in names]
     try:
         cur = conn.cursor()
-        cur.executemany("insert into project_names(project_name, "
+        cur.executemany(f"insert into {table}(project_name, "
                         "api_has_been_queried, api_query_succeeded, "
                         "execution_error, contributors, ts) "
                         "values (?, ?, ?, ?, ?, ?)", to_insert)
@@ -69,7 +69,8 @@ def main():
           f"instantiated to execute queries as user {args.neo4j_user}\n",
           file=sys.stderr)
 
-    cypher_query = ("MATCH (p:Project)-[:IS_WRITTEN_IN]->"
+    cypher_query = ("MATCH (:Platform{name:'Pypi'})-[:HOSTS]->"
+                    "(p:Project)-[:IS_WRITTEN_IN]->"
                     "(:Language {name: 'Python'}) return p order by p.name")
     print(f"Executing Cypher query:\n{cypher_query}\n", file=sys.stderr)
 
@@ -84,7 +85,6 @@ def main():
           f"{args.DB}.{args.table}", file=sys.stderr)
     with connect(args.DB) as conn:
         names_inserted = populate_sqlite_project_names(conn,
-                                                       args.DB,
                                                        args.table,
                                                        project_names)
     print(f"{names_inserted} records inserted into {args.DB}.{args.table}",

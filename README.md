@@ -41,7 +41,7 @@ that he contributes to 7 of the 10 most-influential projects from
 a degree centrality perspective, and 5 of the 10 most-influential
 projects with respect to the number of incoming `DEPENDS_ON`
 relationships. The hypothesized most-influential `Contributor`,
-Kenneth Reitz, contributes to only 2 and 1 projects, respectively.
+Kenneth Reitz, contributes to only 2 and 1 of these projects, respectively.
 
 For more context around this finding and how it was reached, read on.
 ## The Approach
@@ -82,6 +82,8 @@ size comparisons [here](https://github.com/ebb-earl-co/libraries_io/blob/master/
 **WARNING**: The tar.gz file that contains these data is 12 GB itself, and
 once downloaded takes quite a while to un`tar`; once uncompressed, the data
 take up 64 GB on disk!
+
+![untar time](untar_tar_gz_file_time.png)
 
 ### Graph Databases, Starring Neo4j
 Because of the interconnected nature of software packages (dependencies,
@@ -166,7 +168,9 @@ $ mlr --csv filter '$Platform == "Pypi" && $Language == "Python"' projects-1.4.0
 Python-language Pypi packages, each of which sends one request to the
 [Contributors endpoint](https://libraries.io/api#project-contributors)
 of the Libraries.io API, at "maximum velocity", it will require
-$$95160 \text{ packages}\times \frac{1\text{ minute}}{60\text{ packages}}\times\frac{1\text{ hour}}{60\text{ minutes}}=26.43\text{ hours}$$
+
+![packages time to request](packages_time_to_request.png)
+
 to get contributor data for each project.
 
 Following the example of
@@ -174,16 +178,16 @@ Following the example of
 it is possible to use the aforementioned APOC utilities for Neo4j to
 [load data from web APIs](https://neo4j.com/docs/labs/apoc/current/import/web-apis/),
 but I found it to be unwieldy and difficult to monitor. So, I used
-Python's `requests` and `SQLite` packages to request the API and store
-the responses in a long-running Bash process 
+Python's `requests` and `SQLite` packages to send requests to the
+endpoint and store the responses in a long-running Bash process 
 (code for this [here](https://github.com/ebb-earl-co/libraries_io/blob/master/python/request_libraries_io_load_sqlite.py)).
 #### Database Constraints
 Analogously to the unique constraint in a relational database, Neo4j has a
 [uniqueness constraint](https://neo4j.com/docs/cypher-manual/3.5/schema/constraints/#query-constraint-unique-nodes)
 which is very useful in constraining the number of nodes created. Basically,
 it isn't useful or performant to have two different nodes representing the
-platform Pypi because it is a unique entity. Moreover, uniqueness constraints
-enable 
+platform Pypi (or the language Python, or the project `pipenv`, ...) because
+it is a unique entity. Moreover, uniqueness constraints enable 
 [more performant queries](https://neo4j.com/docs/cypher-manual/3.5/clauses/merge/#query-merge-using-unique-constraints).
 The following
 [Cypher commands](https://github.com/ebb-earl-co/libraries_io/blob/master/cypher/schema.cypher)
@@ -208,9 +212,10 @@ can be done with the default
 [`LOAD CSV` command](https://neo4j.com/docs/cypher-manual/current/clauses/load-csv/),
 but in the APOC plugin there is an improved version,
 [`apoc.load.csv`](https://neo4j.com/docs/labs/apoc/current/import/load-csv/#load-csv),
-that features parallel execution; when coupled with
+which iterates over the CSV rows as map objects instead of arrays; 
+when coupled with
 [periodic execution](https://neo4j.com/docs/labs/apoc/current/import/load-csv/#_transaction_batching)
-(a.k.a. batching), loading large CSVs is made much more manageable.
+(a.k.a. batching), loading CSVs can be done in parallel, as well.
 ### Creating Python and Pypi Nodes
 As all projects that are to be loaded are hosted on Pypi, the first
 node to be created in the graph is the Pypi `Platform` node itself:
@@ -294,7 +299,7 @@ link their dependencies. The source CSV for these data is
 and this query is in
 [this file](https://github.com/ebb-earl-co/libraries_io/blob/master/cypher/dependencies_apoc.cypher).
 Because the `Project`s and `Version`s already exist, this operation
-is just the one MATCH-MATCH-MERGE query, creating relationships. Is is run with
+is just the one MATCH-MATCH-MERGE query, creating relationships. It is run with
 ```
 CALL apoc.cypher.runFile('/path/to/libraries_io/cypher/dependencies_apoc.cypher') yield row, result return 0;
 ```
@@ -321,7 +326,7 @@ On the way to understanding the most influential `Contributor`,
 it is useful to find the most influential `Project`. Intuitively,
 the most influential `Project` node should be the node with the
 most (or very many) incoming `DEPENDS_ON` relationships; however,
-the degree centrality algorithm is not as simple as simply counting
+the degree centrality algorithm is not as simple as just counting
 the number of relationships incoming and outgoing and ordering by
 descending cardinality (although that is a useful metric for
 understanding a [sub]graph). This is because the subgraph that
@@ -426,6 +431,8 @@ and the resulting top 10 in terms of degree centrality score are:
 nearly double that of the second-most-influential `Contributor`!
 Kenneth Reitz, the author of the most-influential `Project`
 node comes in 9th place based on this query.
+
+
 
 ## Conclusion
 Using the Libraries.io Open Data dataset, the Python projects
