@@ -2,4 +2,4 @@ MATCH (:Language {name: 'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Pla
 with p
 CALL apoc.create.removeProperties(p, ["merged_contributors"])
 yield node
-return [];
+return null;

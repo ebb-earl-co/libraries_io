@@ -23,25 +23,25 @@ The `Contributor` with the highest degree centrality is
 [Jon Dufresne](https://github.com/jdufresne), and it's not even close; below are the
 top 10:
 
-|Contributor|GitHub login|Degree Centrality Score|
-|---|---|---|
-|Jon Dufresne|jdufresne|835467.0|
-|Marc Abramowitz|msabramo|460274.0|
-|Donald Stufft|dstufft|350071.0|
-|Hugo|hugovk|334717.0|
-|Anthony Sottile|asottile|312436.0|
-|Jason R. Coombs|jaraco|307082.0|
-|Felix Yan|felixonmars|306798.0|
-|Ian Stapleton Cordasco|sigmavirus24|306739.0|
-|Kenneth Reitz|kennethreitz|272559.0|
-|Cory Benfield|Lukasa|254030.0|
+|Contributor|GitHub login|Degree Centrality Score|# Top-10 Projects Contributes To|
+|---|---|---|---|
+|Jon Dufresne|jdufresne|908745|6|
+|Marc Abramowitz|msabramo|504221|4|
+|Donald Stufft|dstufft|383271|3|
+|Hugo|hugovk|363857|2|
+|Jason R. Coombs|jaraco|340564|2|
+|Anthony Sottile|asottile|339792|2|
+|Felix Yan|felixonmars|332378|2|
+|Ian Stapleton Cordasco|sigmavirus24|326373|2|
+|Kenneth Reitz|kennethreitz|288946|2|
+|Cory Benfield|Lukasa|272798|1|
 
 What no doubt contributed to @jdufresne's stratospheric score is
-that he contributes to 7 of the 10 most-influential projects from
-a degree centrality perspective, and 5 of the 10 most-influential
-projects with respect to the number of incoming `DEPENDS_ON`
-relationships. The hypothesized most-influential `Contributor`,
-Kenneth Reitz, contributes to only 2 and 1 of these projects, respectively.
+that he contributes to 6 of the 10 most-influential projects from
+a degree centrality perspective, and 5 of the 10 most-depended-on
+projects (i.e. the number of incoming `DEPENDS_ON` relationships.
+The hypothesized most-influential `Contributor`, Kenneth Reitz,
+contributes to only 2 and 1 of these projects, respectively.
 
 For more context around this finding and how it was reached, read on.
 ## The Approach
@@ -370,16 +370,16 @@ returns the following (top 10) results:
 
 |Project|Degree Centrality Score|
 |---|---|
-|requests|15993.0|
-|six|10290.0|
-|python-dateutil|4067.0|
-|setuptools|3850.0|
-|PyYAML|3359.0|
-|click|2679.0|
-|lxml|2177.0|
-|Flask|1578.0|
-|boto3|1471.0|
-|Django|1450.0|
+|requests|18184|
+|six|11918|
+|python-dateutil|4426|
+|setuptools|4120|
+|PyYAML|3708|
+|click|3159|
+|lxml|2308|
+|futures|1726|
+|boto3|1701|
+|Flask|1678|
 
 There are two `Project`s that are far ahead of the others in
 terms of degree centrality: `requests` and `six`. That `six`
@@ -403,7 +403,7 @@ their contributions to `Project`s. The query
 is:
 ```cypher
 call algo.degree.stream(
-	"MATCH (:Platform {name:'Pypi'})-[:HOSTS]->(p:Project) with p MATCH (:Language {name:'Python'})<-[:IS_WRITTEN_IN]-(p)<-[:CONTRIBUTES_TO]-(c:Contributor) return id(c) as id",
+    "MATCH (:Platform {name:'Pypi'})-[:HOSTS]->(p:Project) with p MATCH (:Language {name:'Python'})<-[:IS_WRITTEN_IN]-(p)<-[:CONTRIBUTES_TO]-(c:Contributor) return id(c) as id",
     "MATCH (c1:Contributor)-[:CONTRIBUTES_TO]->(:Project)-[:HAS_VERSION]->(:Version)-[:DEPENDS_ON]->(:Project)<-[:CONTRIBUTES_TO]-(c2:Contributor) return id(c2) as source, id(c1) as target",
     {graph: 'cypher', write: False}
 )
@@ -414,25 +414,82 @@ ORDER BY degree_centrality_score DESC
 ```
 and the resulting top 10 in terms of degree centrality score are:
 
-|Contributor|GitHub login|Degree Centrality Score|
-|---|---|---|
-|Jon Dufresne|jdufresne|835467.0|
-|Marc Abramowitz|msabramo|460274.0|
-|Donald Stufft|dstufft|350071.0|
-|Hugo|hugovk|334717.0|
-|Anthony Sottile|asottile|312436.0|
-|Jason R. Coombs|jaraco|307082.0|
-|Felix Yan|felixonmars|306798.0|
-|Ian Stapleton Cordasco|sigmavirus24|306739.0|
-|Kenneth Reitz|kennethreitz|272559.0|
-|Cory Benfield|Lukasa|254030.0|
+|Contributor|GitHub login|Degree Centrality Score|# Top-10 Projects Contributes To|
+|---|---|---|---|
+|Jon Dufresne|jdufresne|908745|6|
+|Marc Abramowitz|msabramo|504221|4|
+|Donald Stufft|dstufft|383271|3|
+|Hugo|hugovk|363857|2|
+|Jason R. Coombs|jaraco|340564|2|
+|Anthony Sottile|asottile|339792|2|
+|Felix Yan|felixonmars|332378|2|
+|Ian Stapleton Cordasco|sigmavirus24|326373|2|
+|Kenneth Reitz|kennethreitz|288946|2|
+|Cory Benfield|Lukasa|272798|1|
 
 `Contributor` Jon Dufresne has the highest score which is
 nearly double that of the second-most-influential `Contributor`!
 Kenneth Reitz, the author of the most-influential `Project`
-node comes in 9th place based on this query.
+node comes in 9th place based on this query. What no doubt
+contributed to @jdufresne's stratospheric score is
+that he contributes to 6 of the 10 most-influential projects from
+a degree centrality perspective. The hypothesized most-influential
+`Contributor`, Kenneth Reitz, contributes to only 2 of these projects.
 
 
+**SCRAP THIS WHOLE SECTION— NEED WEIGHTS ON RELS TO BE OF ANY USE**
+### Community Detection
+Clearly, the amount of Top-10 `Project`s contributed to is perfectly
+correlated (allowing ties) with a `Contributor`'s degree
+centrality score. Is this the only feature that contributes to
+the high degree centrality of this group of `Contributor`s? That
+is, is there other structure in the graph that can identify the
+most influential `Contributor`(s)?
+
+To find out, we will use one of the
+[community detection algorithms](https://neo4j.com/docs/graph-algorithms/current/algorithms/community/)
+in the Neo4j `algo` plugin, the
+[Louvain algorithm](https://neo4j.com/docs/graph-algorithms/current/algorithms/louvain/).
+Simply put, `algo.louvain` finds communities in a network. Now,
+there is no distinction in this implementation between a directed
+(this type of graph) and undirected graph, so it behooves use to
+pass weights to `algo.louvain` for a more informative community
+detection. These weights will be the fraction of the top degree
+centrality score, that of Jon Dufresne, yielding every node to
+have a weight <= 1.0. The Cypher queries for this are below;
+the first calls `algo.degree` (_not_ `algo.degree.stream` as
+before) in order to write the `degree_centrality` property to
+each `Contributor` node. Then, the second `SET`s a new property
+on `Contributor` nodes, the `louvain_weight` that is the fraction
+of the max degree centrality score:
+```cypher
+call algo.degree(
+    "MATCH (:Platform {name:'Pypi'})-[:HOSTS]->(p:Project) with p MATCH (:Language {name:'Python'})<-[:IS_WRITTEN_IN]-(p)<-[:CONTRIBUTES_TO]-(c:Contributor) return id(c) as id",
+    "MATCH (c1:Contributor)-[:CONTRIBUTES_TO]->(:Project)-[:HAS_VERSION]->(:Version)-[:DEPENDS_ON]->(:Project)<-[:CONTRIBUTES_TO]-(c2:Contributor) return id(c2) as source, id(c1) as target",
+    {graph: 'cypher', write:true, writeProperty:'degree_centrality'}
+);
+
+MATCH (jd:Contributor {name:'Jon Dufresne'})
+with jd
+MATCH (:Language {name: 'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Platform {name: 'Pypi'})
+with p, jd
+MATCH (c:Contributor)-[:CONTRIBUTES_TO]->(p)
+with c, p, jd
+SET c.louvain_weight=c.degree_centrality / jd.degree_centrality
+;
+```
+
+* Write about the Louvain algorithm, using weights as fraction of jdufresne's score
+* Find out who contributed to the most Top-10 projects
+```cypher
+MATCH (:Language {name: 'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Platform {name: 'Pypi'})
+	WHERE p.name in ["requests","six","python-dateutil","setuptools","PyYAML","click","lxml","futures","boto3","Flask"]
+with p
+MATCH (c:Contributor)-[ct:CONTRIBUTES_TO]->(p)
+with c, count(ct) as num_top_10_contributed_to
+WHERE num_top_10_contributed_to > 0
+return c, num_top_10_contributed_to order by num_top_10_contributed_to DESC
+```
 
 ## Conclusion
 Using the Libraries.io Open Data dataset, the Python projects
