@@ -23,18 +23,18 @@ The `Contributor` with the highest degree centrality is
 [Jon Dufresne](https://github.com/jdufresne), and it's not even close; below are the
 top 10:
 
-|Contributor|GitHub login|Degree Centrality Score|# Top-10 Projects Contributes To|
-|---|---|---|---|
-|Jon Dufresne|jdufresne|908745|6|
-|Marc Abramowitz|msabramo|504221|4|
-|Donald Stufft|dstufft|383271|3|
-|Hugo|hugovk|363857|2|
-|Jason R. Coombs|jaraco|340564|2|
-|Anthony Sottile|asottile|339792|2|
-|Felix Yan|felixonmars|332378|2|
-|Ian Stapleton Cordasco|sigmavirus24|326373|2|
-|Kenneth Reitz|kennethreitz|288946|2|
-|Cory Benfield|Lukasa|272798|1|
+|Contributor|GitHub login|Degree Centrality Score|
+|---|---|---|
+|Jon Dufresne|jdufresne|908745|
+|Marc Abramowitz|msabramo|504221|
+|Donald Stufft|dstufft|383271|
+|Hugo|hugovk|363857|
+|Jason R. Coombs|jaraco|340564|
+|Anthony Sottile|asottile|339792|
+|Felix Yan|felixonmars|332378|
+|Ian Stapleton Cordasco|sigmavirus24|326373|
+|Kenneth Reitz|kennethreitz|288946|
+|Cory Benfield|Lukasa|272798|
 
 What no doubt contributed to @jdufresne's stratospheric score is
 that he contributes to 6 of the 10 most-influential projects from
@@ -79,7 +79,7 @@ There is a substantial reduction in the data when subsetting these CSVs just
 to the data pertaining to PyPi; find the code used to subset them and the
 size comparisons [here](https://github.com/ebb-earl-co/libraries_io/blob/master/data/pypi_subsetting.md).
 
-**WARNING**: The tar.gz file that contains these data is 12 GB itself, and
+**WARNING**: The tar.gz file that contains these data is 13 GB itself, and
 once downloaded takes quite a while to un`tar`; once uncompressed, the data
 take up 64 GB on disk!
 
