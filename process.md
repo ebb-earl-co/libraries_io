@@ -38,8 +38,8 @@ records in which `api_has_been_queried=1 AND api_query_succeeded=1`.
     with the project
 16. For the nodes that failed (15), they have property `merged_contributors=0`. So,
 run `merge_projects_with_py2neo.py /path/to/SQLite.db 0` in order to repeat the
-process from (15) for the Project nodes the contributors of which were not merged
+process from (15) for the Project nodes the `Contributor`s of which were not MERGEd
 17. Run the Cypher script `remove_merged_contributors_property.cypher` to remove
 the `merged_contributors` property from all nodes. It was only necessary during
 the previous operation, so can safely be unset.
-18. _Finally_, run query for degree centrality to find the most influential contributor to Pypi
+18. _Finally_, run query for degree centrality to find the most influential contributor on Pypi
