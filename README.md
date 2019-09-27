@@ -414,18 +414,18 @@ ORDER BY degree_centrality_score DESC
 ```
 and the resulting top 10 in terms of degree centrality score are:
 
-|Contributor|GitHub login|Degree Centrality Score|# Top-10 Projects Contributes To|
-|---|---|---|---|
-|Jon Dufresne|jdufresne|908745|6|
-|Marc Abramowitz|msabramo|504221|4|
-|Donald Stufft|dstufft|383271|3|
-|Hugo|hugovk|363857|2|
-|Jason R. Coombs|jaraco|340564|2|
-|Anthony Sottile|asottile|339792|2|
-|Felix Yan|felixonmars|332378|2|
-|Ian Stapleton Cordasco|sigmavirus24|326373|2|
-|Kenneth Reitz|kennethreitz|288946|2|
-|Cory Benfield|Lukasa|272798|1|
+|Contributor|GitHub login|Degree Centrality Score|# Top-10 Contributions|# Total Contributions|Total Contributions Rank|
+|---|---|---|---|---|---|
+|Jon Dufresne|jdufresne|908745|6|131|136th|
+|Marc Abramowitz|msabramo|504221|4|421|15th|
+|Donald Stufft|dstufft|383271|3|94|219th|
+|Hugo|hugovk|363857|2|216|96th|
+|Jason R. Coombs|jaraco|340564|2|169|110th|
+|Anthony Sottile|asottile|339792|2|130|137th|
+|Felix Yan|felixonmars|332378|2|111|168th|
+|Ian Stapleton Cordasco|sigmavirus24|326373|2|60|350th|
+|Kenneth Reitz|kennethreitz|288946|2|101|205th|
+|Cory Benfield|Lukasa|272798|1|35|786th|
 
 `Contributor` Jon Dufresne has the highest score which is
 nearly double that of the second-most-influential `Contributor`!
@@ -436,61 +436,41 @@ that he contributes to 6 of the 10 most-influential projects from
 a degree centrality perspective. The hypothesized most-influential
 `Contributor`, Kenneth Reitz, contributes to only 2 of these projects.
 
-
-**SCRAP THIS WHOLE SECTION— NEED WEIGHTS ON RELS TO BE OF ANY USE**
-### Community Detection
-Clearly, the amount of Top-10 `Project`s contributed to is perfectly
-correlated (allowing ties) with a `Contributor`'s degree
-centrality score. Is this the only feature that contributes to
-the high degree centrality of this group of `Contributor`s? That
-is, is there other structure in the graph that can identify the
-most influential `Contributor`(s)?
-
-To find out, we will use one of the
-[community detection algorithms](https://neo4j.com/docs/graph-algorithms/current/algorithms/community/)
-in the Neo4j `algo` plugin, the
-[Louvain algorithm](https://neo4j.com/docs/graph-algorithms/current/algorithms/louvain/).
-Simply put, `algo.louvain` finds communities in a network. Now,
-there is no distinction in this implementation between a directed
-(this type of graph) and undirected graph, so it behooves use to
-pass weights to `algo.louvain` for a more informative community
-detection. These weights will be the fraction of the top degree
-centrality score, that of Jon Dufresne, yielding every node to
-have a weight <= 1.0. The Cypher queries for this are below;
-the first calls `algo.degree` (_not_ `algo.degree.stream` as
-before) in order to write the `degree_centrality` property to
-each `Contributor` node. Then, the second `SET`s a new property
-on `Contributor` nodes, the `louvain_weight` that is the fraction
-of the max degree centrality score:
+It turns out that 6 is the most top-10 `Project`s contributed to out
+of all `Contributor`s, and only 243 `Contributor`s
+`CONTRIBUTES_TO` a top-10 `Project` at all (query
+[here](https://github.com/ebb-earl-co/libraries_io/blob/master/cypher/most_contributions_to_top_10_projects.cypher)).
+As this table hints, there is a high correlation between the degree
+centrality score and the number of top-10 `Project`s contributed
+to, but not such a meaningful correlation between number of
+_total_ projects
+(query [here](https://github.com/ebb-earl-co/libraries_io/blob/master/cypher/most_contributions_total.cypher)) contributed to.
+Indeed, using the [`algo.similarity.pearson` function](https://neo4j.com/docs/graph-algorithms/current/experimental-algorithms/pearson/#algorithms-similarity-pearson-function-sample):
 ```cypher
-call algo.degree(
-    "MATCH (:Platform {name:'Pypi'})-[:HOSTS]->(p:Project) with p MATCH (:Language {name:'Python'})<-[:IS_WRITTEN_IN]-(p)<-[:CONTRIBUTES_TO]-(c:Contributor) return id(c) as id",
-    "MATCH (c1:Contributor)-[:CONTRIBUTES_TO]->(:Project)-[:HAS_VERSION]->(:Version)-[:DEPENDS_ON]->(:Project)<-[:CONTRIBUTES_TO]-(c2:Contributor) return id(c2) as source, id(c1) as target",
-    {graph: 'cypher', write:true, writeProperty:'degree_centrality'}
-);
-
-MATCH (jd:Contributor {name:'Jon Dufresne'})
-with jd
 MATCH (:Language {name: 'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Platform {name: 'Pypi'})
-with p, jd
-MATCH (c:Contributor)-[:CONTRIBUTES_TO]->(p)
-with c, p, jd
-SET c.louvain_weight=c.degree_centrality / jd.degree_centrality
+WITH p
+MATCH (p)<-[ct:CONTRIBUTES_TO]-(c:Contributor)
+WHERE p.name in ["requests","six","python-dateutil","setuptools","PyYAML","click","lxml","futures","boto3","Flask"]
+WITH c, count(ct) as num_top_10_contributions
+WITH collect(c.degree_centrality) as dc, collect(num_top_10_contributions) as tc
+RETURN algo.similarity.pearson(dc, tc) AS degree_centrality_top_10_contributions_correlation_estimate
 ;
 ```
-
-* Write about the Louvain algorithm, using weights as fraction of jdufresne's score
-* Find out who contributed to the most Top-10 projects
+yields an estimate of 0.6158, whereas
 ```cypher
 MATCH (:Language {name: 'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Platform {name: 'Pypi'})
-	WHERE p.name in ["requests","six","python-dateutil","setuptools","PyYAML","click","lxml","futures","boto3","Flask"]
-with p
-MATCH (c:Contributor)-[ct:CONTRIBUTES_TO]->(p)
-with c, count(ct) as num_top_10_contributed_to
-WHERE num_top_10_contributed_to > 0
-return c, num_top_10_contributed_to order by num_top_10_contributed_to DESC
+WITH p
+MATCH (p)<-[ct:CONTRIBUTES_TO]-(c:Contributor)
+WITH c, count(ct) as num_total_contributions
+WITH collect(c.degree_centrality) as dc, collect(num_total_contributions) as tc
+RETURN algo.similarity.pearson(dc, tc) AS degree_centrality_total_contributions_correlation_estimate
+;
 ```
+is only 0.1755.
 
+All this goes to show that, in a network, the centrality of a
+node is determined by contributing to the _right_ nodes,
+not necessarily the _most_ nodes.
 ## Conclusion
 Using the Libraries.io Open Data dataset, the Python projects
 on PyPi and their contributors were analyzed using Neo4j– in
