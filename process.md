@@ -6,7 +6,7 @@
     c. Rename and filter versions CSV
 4. Start Neo4j, install Graph algorithms and APOC
 5. Run `schema.cypher`
-6. Run Cypher: "CREATE (p:Platform {name: 'Pypi'})"
+6. CREATE the Pypi `Platform`, the Python `Language`, and create their relationship, `HAS_DEFAULT_LANGUAGE`
 7. Run `projects_apoc.cypher`
 8. Run `versions_apoc.cypher`
 9. Run `dependencies_apoc.cypher`
@@ -23,12 +23,23 @@
 13. Run `request_libraries_io_load_sqlite.py`, but querying for
 records that have `api_has_been_queried=1 AND api_query_succeeded=0`.
 Do as [12]
-14. Run `project_contributors_from_sqlite_to_neo4j.py`, using SQLite
+14. Use Cypher to run `set_merged_contributors_property.cypher`. This
+script adds a `merged_contributors` property to every Python `Project`
+node, with the value -1. N.b.
+  - The value -1 indicates that the particular node has not attempted
+  to merge its `Contributor`s yet
+  - The value is changed to 1 if the merge operation is successful
+  - The value is changed to 0 if the merge operation is not successful
+15. Run `merge_projects.py /path/to/SQLite.db -1`, using SQLite
 records in which `api_has_been_queried=1 AND api_query_succeeded=1`.
-    a. Given a `project_name`, pick up its `contributors` field in 
-    SQLite. If this is empty, return None
-    b. If `contributors` is not empty, create a Neo4j driver
-    c. Run `merge_contributors.py` for the `project_name` and `contributors`, returning result of Cypher MERGE query for each contributor
-    d. If resulting dictionary has True value for `has_contributor_error`, rerun the project_name, contributor combo
-15. Run as-of-yet-undefined script to execute `MATCH-MATCH-MERGE` operation on project nodes and contributor nodes
-16. _Finally_, run query for degree centrality to find the most influential contributor to Pypi
+    a. Get all project names, contributors that represent Python `Project`s on Pypi
+    b. For each project, make a py2neo.Node for each of its contributors
+    c. For each contributor, MERGE that contributor then MERGE its relationship
+    with the project
+16. For the nodes that failed (15), they have property `merged_contributors=0`. So,
+run `merge_projects_with_py2neo.py /path/to/SQLite.db 0` in order to repeat the
+process from (15) for the Project nodes the contributors of which were not merged
+17. Run the Cypher script `remove_merged_contributors_property.cypher` to remove
+the `merged_contributors` property from all nodes. It was only necessary during
+the previous operation, so can safely be unset.
+18. _Finally_, run query for degree centrality to find the most influential contributor to Pypi
