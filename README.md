@@ -143,7 +143,7 @@ and `HAS_VERSION` `Version`. Moreover, a `Project` `DEPENDS_ON` other
 Open Data: that `Project` nodes are linked in the dependencies CSV to other
 `Project` nodes, despite the fact that different versions of a project
 depend on varying versions of other projects. Take, for example, this row
-from the [dependencies CSV](https://github.com/ebb-earl-co/libraries_io/blob/master/data/pypi_subsetting.md#L65):
+from the [dependencies CSV](https://github.com/ebb-earl-co/libraries_io/blob/master/data/pypi_subsetting.md#dependencies):
 
 |ID|Project\_Name|Project\_ID|Version\_Number|Version\_ID|Dependency\_Name|Dependency\_Kind|Optional\_Dependency|Dependency\_Requirements|Dependency\_Project\_ID|
 |---|---|---|---|---|---|---|---|---|---|
@@ -267,7 +267,7 @@ parsimony, we will load data in the following order:
   4. `Contributor`s
 #### Loading `Project`s
 First up is the `Project` nodes. The source CSV for this type of node is
-[pypi\_projects.csv](https://github.com/ebb-earl-co/libraries_io/blob/master/data/pypi_subsetting.md#L62)
+[pypi\_projects.csv](https://github.com/ebb-earl-co/libraries_io/blob/master/data/pypi_subsetting.md#projects)
 and the queries are in 
 [this file](https://github.com/ebb-earl-co/libraries_io/blob/master/cypher/projects_apoc.cypher).
 Neo4j loads the CSVs data following the instructions of the file with the
@@ -281,7 +281,7 @@ is populated:
 ![post-projects\_apoc](images/projects_apoc-cypher_result.png)
 #### Loading `Version`s
 Next are the `Version`s of the `Project`s. The source CSV for this type
-of node is [pypi\_versions.csv](https://github.com/ebb-earl-co/libraries_io/blob/master/data/pypi_subsetting.md#L72)
+of node is [pypi\_versions.csv](https://github.com/ebb-earl-co/libraries_io/blob/master/data/pypi_subsetting.md#versions)
 and the queries are in
 [this file](https://github.com/ebb-earl-co/libraries_io/blob/master/cypher/versions_apoc.cypher).
 These queries are run with
@@ -295,7 +295,7 @@ the following nodes and relationships:
 #### Loading Dependencies among `Project`s and `Version`s
 Now that there are `Project` nodes and `Version` nodes, it's time to
 link their dependencies. The source CSV for these data is 
-[pypi\_dependencies.csv](https://github.com/ebb-earl-co/libraries_io/blob/master/data/pypi_subsetting.md#L67)
+[pypi\_dependencies.csv](https://github.com/ebb-earl-co/libraries_io/blob/master/data/pypi_subsetting.md#dependencies)
 and this query is in
 [this file](https://github.com/ebb-earl-co/libraries_io/blob/master/cypher/dependencies_apoc.cypher).
 Because the `Project`s and `Version`s already exist, this operation
