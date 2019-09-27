@@ -125,7 +125,7 @@ corresponding to Neo4j version 3.5.7.
 is the most common way to populate a Neo4j graph, and is how we will
 proceed given that the Open Data snapshot un`tar`s into CSV files. However,
 first a data model is necessary— what the entities that will be
-represented as labelled nodes with properties and the relationships 
+represented as labeled nodes with properties and the relationships 
 among them are going to be. Moreover, some settings of Neo4j
 will have to be customized for proper and timely import from CSV.
 #### Data Model
@@ -185,13 +185,13 @@ endpoint and store the responses in a long-running Bash process
 Analogously to the unique constraint in a relational database, Neo4j has a
 [uniqueness constraint](https://neo4j.com/docs/cypher-manual/3.5/schema/constraints/#query-constraint-unique-nodes)
 which is very useful in constraining the number of nodes created. Basically,
-it isn't useful or performant to have two different nodes representing the
+it isn't useful, and hurts performance, to have two different nodes representing the
 platform Pypi (or the language Python, or the project `pipenv`, ...) because
 it is a unique entity. Moreover, uniqueness constraints enable 
 [more performant queries](https://neo4j.com/docs/cypher-manual/3.5/clauses/merge/#query-merge-using-unique-constraints).
 The following
 [Cypher commands](https://github.com/ebb-earl-co/libraries_io/blob/master/cypher/schema.cypher)
-add uniquness constraints on the properties of the nodes that should be unique
+add uniqueness constraints on the properties of the nodes that should be unique
 in this data paradigm:
 ```cypher
 CREATE CONSTRAINT on (platform:Platform) ASSERT platform.name IS UNIQUE;
@@ -357,7 +357,7 @@ call algo.degree.stream(
 )
 YIELD nodeId, score
 RETURN algo.asNode(nodeId).name as project, score as degree_centrality_score
-ORDER BY degree_centrality_score DESC LIMIT 10
+ORDER BY degree_centrality_score DESC
 ;
 ```
 It is **crucially** important to alias as `source` the `Project` 
@@ -366,7 +366,7 @@ node MATCHed in the second query as the _end node_ of the
 relationship as `target`. This is not officially documented,
 but the example in the documentation has it as such, and I ran
 into Java errors if not aliased exactly that way. This query
-returns the following (top 10) results:
+returns the following (top 10 displayed) results:
 
 |Project|Degree Centrality Score|
 |---|---|
