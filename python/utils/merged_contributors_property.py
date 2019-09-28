@@ -41,7 +41,7 @@ def main(argv=None):
     try:
         g.evaluate(merged_contributors_property_query)
     except GraphError as ge:
-        print_tb(ge)
+        print_tb(ge, file=sys.stderr)
         sys.exit(1)
     else:
         print(f"Query\n{merged_contributors_property_query}\nexecuted successfully",

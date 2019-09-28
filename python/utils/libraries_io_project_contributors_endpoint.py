@@ -8,16 +8,22 @@ positional argument; e.g.
 
 >>> python %s requests
 
-If the request is successful, the JSON response is returned to STDOUT. Otherwise
-the error that occurred during the request is returned in JSON format to STDOUT.
+The fetching of results is complicated by the `page` and `per_page` parameters
+of the API. The max `per_page` allowed is 100, so if there are more than 100
+contributors for a given project, the response's content must be checked and
+the API called again until all `page`s of results are retreived. If the process
+is successful, the combined JSON response is returned to STDOUT. Otherwise,
+the error that occurred during the request(s) is returned in JSON format to STDOUT.
 """
+import itertools
 import json
 import logging
 import os
 import sys
+import traceback
 from collections import namedtuple
 
-from requests import get as GET
+from requests import Request, Session
 from requests.exceptions import HTTPError
 
 URL = "https://libraries.io/api/Pypi/%s/contributors"
@@ -25,29 +31,34 @@ content_and_error = namedtuple("ContentAndError", ["content", "error"])
 logger = logging.getLogger(__name__)
 
 
-def build_GET_request(url):
+def build_get_request(url, get_api_key=True, per_page=100, page=1):
     """ Given url, return requests.get object that is prepared with
     the keywords 'url', 'params' passed. N.b. the params are created
     internally because they are taken from ENV variables or user input.
 
     Args:
         url (str): the url to pass to requests.get; the API to request
+        get_api_key (bool): whether to get 'APIKEY' from ENV vars
+        per_page (int): the number of results to fetch
+        page (int): the ith set of `per_page` results to fetch, i > 0
     Returns:
-        (requests.get): the requests.get object for further processing
+        (requests.Request): the requests.Request object for further processing
     """
     def get_api_key():
         api_key = os.environ.get("APIKEY")
         if api_key is None:
-            logger.error("'APIKEY' is not among environment variables!")
+            print("'APIKEY' is not among environment variables!", file=sys.stderr)
             sys.exit(1)
 
         return api_key
 
-    params = {"api_key": get_api_key()}
-    return GET(url=url, params=params)
+    params = {"per_page": per_page, "page": page}
+    if get_api_key:
+        params.update({"api_key": get_api_key()})
+    return Request("GET", url=url, params=params)
 
 
-def execute_GET_request(r):
+def execute_get_request(r):
     """ Given a `requests.get` object, execute the GET request and return one of
     three JSON objects: 1) requests.HTTPError that arose; 2) Other Python
     exception that arose; or 3) The response in the form {"data": <response>}
@@ -84,17 +95,36 @@ def main(argv=None):
 
     if '-h' in argv or '--help' in argv:
         print(__doc__ % argv[0], file=sys.stderr)
-        return 0
+        sys.exit(0)
 
     try:
         project_name = argv[1]
     except IndexError:
         print("Project name not passed", file=sys.stderr)
-        return 1
+        sys.exit(0)
+    except Exception as e:
+        traceback.print_tb(e, file=sys.stderr)
+        sys.exit(1)
 
     # Requesting from API
-    GET_request = build_GET_request(URL % project_name)
-    return execute_GET_request(GET_request)
+    per_page = 100
+    s = Session()
+
+    get_request = build_get_request(URL % project_name, per_page=per_page)
+    prepared_request = s.prepare_request(get_request)
+    response = s.send(prepared_request)
+    response_contents = [response.json()]
+    next_page = response.links.get("next", None)
+    while next_page is not None:
+        # The next_page["url"] has all parameters ready to go
+        get_request = build_get_request(next_page["url"], get_api_key=False)
+        prepared_request = s.prepare_request(get_request)
+        response = s.send(prepared_request)
+        response_contents.append(response.json())
+        next_page = response.links.get("next", None)
+    else:
+        return list(itertools.chain(*response_contents))
+
 
 if __name__ == '__main__':
-    sys.stdout.write(main())
+    print(main())

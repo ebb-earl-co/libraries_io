@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from sqlite3 import connect, OperationalError
 import sys
+import traceback
+from sqlite3 import connect, OperationalError
 
 
 def main(argv=None):
@@ -19,17 +20,19 @@ def main(argv=None):
         c = conn.cursor()
         try:
             c.execute("""create table project_names (
-                project_name text unique not null,
+                project_name text not null,
+                page int not null,
                 api_has_been_queried integer,
                 api_query_succeeded integer,
                 execution_error text,
                 contributors blob,
-                ts timestamp)""")
+                ts timestamp,
+                PRIMARY KEY(project_name, page))""")
         except OperationalError:
             print("Table has already been created", file=sys.stderr)
             return 0
         except Exception as e:
-            print(str(e), file=sys.stderr)
+            traceback.print_tb(e, file=sys.stderr)
             return 1
         else:
             print("Table created successfully", file=sys.stderr)

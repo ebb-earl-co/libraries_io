@@ -12,6 +12,7 @@ hypothesis = "*"
 py2neo = "*"
 neo4j-driver = "*"
 requests = "*"
+ratelimit = "*"
 
 [requires]
 python_version = "3.6"

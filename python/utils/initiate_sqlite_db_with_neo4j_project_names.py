@@ -4,13 +4,12 @@
 import json
 import os
 import sys
+import traceback
 from argparse import ArgumentParser, RawTextHelpFormatter
 from sqlite3 import connect, OperationalError, IntegrityError
 
-from utils.get_pypi_python_projects_from_neo4j import \
+from get_pypi_python_projects_from_neo4j import \
     getpass, get_neo4j_driver, execute_cypher_query, URI
-from utils.libraries_io_project_contributors_endpoint import \
-    build_GET_request, execute_GET_request, URL
 
 
 def populate_sqlite_project_names(conn, table, names):
@@ -18,15 +17,16 @@ def populate_sqlite_project_names(conn, table, names):
     project names, insert into `table` the `names`. This is a single-use
     utility to populate DB for the first time.
     """
-    to_insert = [(name, 0, None, None, None, None) for name in names]
+    to_insert = [(name, 1, 0, None, None, None, None) for name in names]
     try:
         cur = conn.cursor()
-        cur.executemany(f"insert into {table}(project_name, "
+        cur.executemany(f"insert into {table}(project_name, page, "
                         "api_has_been_queried, api_query_succeeded, "
                         "execution_error, contributors, ts) "
-                        "values (?, ?, ?, ?, ?, ?)", to_insert)
-    except (IntegrityError, OperationalError):
-        raise
+                        "values (?, ?, ?, ?, ?, ?, ?)", to_insert)
+    except (IntegrityError, OperationalError) as e:
+        traceback.print_tb(e, file=sys.stderr)
+        sys.exit(1)
     else:
         return cur.rowcount
     finally:
@@ -71,12 +71,11 @@ def main():
 
     cypher_query = ("MATCH (:Platform{name:'Pypi'})-[:HOSTS]->"
                     "(p:Project)-[:IS_WRITTEN_IN]->"
-                    "(:Language {name: 'Python'}) return p order by p.name")
+                    "(:Language{name:'Python'}) return p.name order by p.name")
     print(f"Executing Cypher query:\n{cypher_query}\n", file=sys.stderr)
 
     cypher_result = execute_cypher_query(driver, cypher_query)
-    project_names = [record.get('p').get('name')
-                     for record in cypher_result.records()]
+    project_names = [record.get('p.name') for record in cypher_result.records()]
     print(f"Cypher query resulted in {len(project_names)} records\n",
           file=sys.stderr)
 
