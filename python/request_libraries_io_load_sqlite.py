@@ -11,7 +11,7 @@ from time import sleep
 
 from logger import return_logger
 from utils.libraries_io_project_contributors_endpoint import \
-    build_GET_request, execute_GET_request, URL
+    build_get_request, execute_get_request, URL
 from utils.utils import (connect, craft_sqlite_project_names_update,
                          return_parser, select_from_sqlite,
                          execute_sqlite_query, Binary, Row)

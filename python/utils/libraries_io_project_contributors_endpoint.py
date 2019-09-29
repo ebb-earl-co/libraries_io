@@ -58,16 +58,16 @@ def build_get_request(url, get_api_key=True, per_page=100, page=1):
     return Request("GET", url=url, params=params)
 
 
-def execute_get_request(r):
-    """ Given a `requests.get` object, execute the GET request and return one of
+def parse_request_response_content(r):
+    """ Given a `requests.Response` object, execute the GET request and return one of
     three JSON objects: 1) requests.HTTPError that arose; 2) Other Python
     exception that arose; or 3) The response in the form {"data": <response>}
     from the API.
 
     Args:
-        r (requests.get): instantiated request object
+        r (requests.Reponse): response from requests.get operation
     Returns:
-        (namedtuple): tuple with first field: error, second: response content
+        (namedtuple): tuple of the form (r.content, Exception from r)
     """
     try:
         r.raise_for_status()

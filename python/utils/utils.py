@@ -28,11 +28,11 @@ def return_parser():
     p.add_argument('table', type=str,
                    help='The name of the table in the sqlite DB specified '
                    'in the `DB` argument')
-    p.add_argument('batch_size', type=int,
-                   help='The amount of API calls to execute before sleeping; '
-                   'n.b. the API has a rate limit of 60 per minute')
-    p.add_argument('time_to_sleep', type=int,
-                   help='Time (s) for script to pause between API batches')
+    # p.add_argument('batch_size', type=int,
+    #                help='The amount of API calls to execute before sleeping; '
+    #                'n.b. the API has a rate limit of 60 per minute')
+    # p.add_argument('time_to_sleep', type=int,
+    #                help='Time (s) for script to pause between API batches')
     p.add_argument("-l", "--log", dest="log_level", default='INFO',
                    choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                    help="Set the logging level; default: %(default)s")
@@ -47,11 +47,27 @@ def return_parser():
     return p
 
 
-def craft_sqlite_project_names_update(project_name,
-                                      api_has_been_queried,
-                                      api_query_succeeded):
+def craft_sqlite_project_names_page_insert():
+    """ Return an insert statement corresponding to project_names to pass to
+    sqlite3.Connection.cursor.execute()
+    """
+    update_query = f"""INSERT INTO project_names (
+                    project_name,
+                    page,
+                    api_has_been_queried,
+                    api_query_succeeded,
+                    execution_error,
+                    contributors,
+                    ts) VALUES (?, ?, ?, ?, ?, ?, ?);"""
+    return update_query
+
+
+def craft_sqlite_project_names_page_update(project_name,
+                                           page,
+                                           api_has_been_queried,
+                                           api_query_succeeded):
     """ Given values for each field of the `project_names` table,
-    return a tuple of the parameterized insert statement and the record
+    return a tuple of the parameterized update statement and the record
     to pass to sqlite3.Connection.cursor.execute()
     """
     update_query = f"""UPDATE project_names SET
@@ -59,12 +75,15 @@ def craft_sqlite_project_names_update(project_name,
                     api_query_succeeded={api_query_succeeded},
                     execution_error=?,
                     contributors=?,
-                    ts=current_timestamp WHERE project_name='{project_name}'"""
+                    ts=current_timestamp
+                    WHERE project_name='{project_name}'
+                    AND page={page}"""
     return update_query
 
 
 def execute_sqlite_query(conn, query, params=None):
     execute_args = (query, params) if params is not None else (query,)
+    logger.debug(f'Executing query:\n{query}')
     try:
         cur = conn.cursor()
         cur.execute(*execute_args)
@@ -78,7 +97,7 @@ def execute_sqlite_query(conn, query, params=None):
         return
     else:
         conn.commit()
-        logger.info(f'{cur.rowcount} records changed')
+        logger.debug(f'{cur.rowcount} records changed')
         return 0
     finally:
         cur.close()
