@@ -3,6 +3,7 @@
 
 from datetime import datetime
 from functools import reduce
+from time import sleep
 import itertools as it
 
 from ratelimit import limits, sleep_and_retry
@@ -17,7 +18,7 @@ from utils.utils import (connect, execute_sqlite_query,
 
 
 @sleep_and_retry
-@limits(calls=60, period=60)
+@limits(calls=59, period=60)
 def request_project_contributors(project_name, logger, endpoint=URL, per_page=100):
     """ Request the information according to `project_name` from the
     Libraries.io API, Project Contributors endpoint. This function is
@@ -37,17 +38,25 @@ def request_project_contributors(project_name, logger, endpoint=URL, per_page=10
     s = Session()
     prepared_request = s.prepare_request(get_request)
     response = s.send(prepared_request)
-    out = [{1: parse_request_response_content(response)}]
-    num_contributors = int(response.headers['Total'])
+    try:
+        response.raise_for_status()
+    except HTTPError as h:
+        if response.status_code == 429:
+            logger.debug(f"\tRequest to API for page 1 of '{project_name}' "
+                         "returned 429 error; sleeping...")
+            sleep(30)
+    else:
+        num_contributors = int(response.headers['Total'])
+    finally:
+        out = [(1, parse_request_response_content(response))]
 
     pages_to_request = range((num_contributors // per_page) + 2)[2:]
     for page in pages_to_request:
         logger.debug(f"Requesting page {page} for '{project_name}'...")
         get_request = build_get_request(url, per_page=per_page)
-        s = Session()
         prepared_request = s.prepare_request(get_request)
         response = s.send(prepared_request)
-        out.append({page: parse_request_response_content(response)})
+        out.append((page, parse_request_response_content(response)))
     else:
         logger.debug(f"Done requesting for '{project_name}'\n")
         return out
@@ -55,48 +64,43 @@ def request_project_contributors(project_name, logger, endpoint=URL, per_page=10
 
 def craft_sqlite_execute_args(conn, project_name, pce, logger):
     """ Use a project_name and its corresponding list of results from
-    having run request_project_contributors (read: list of dicts in which each
-    dict is of the form {page: namedtuple(request.content, request.error))
+    having run request_project_contributors (read: list of tuples in which each
+    tuple is of the form (page: namedtuple(response.content, response.error)) )
     and create SQLite update queries for each element in `pce`.
     Args:
         conn (sqlite3.connect): connection to SQLite DB
         project_name (str): the project_name that each pce element corresponds to
-        pce (list): list of dicts of the form {int: namedtuple}
+        pce (list): list of tuples of the form (int: namedtuple)
     Returns:
         (list): of tuples representing arguments to pass to sqlite3.execute
     """
-    # execute_args_list = []
-    for d in pce:  # {page: content_and_error}
+    for tup in pce:
+        page, ce = tup  # (page, content_and_error)
         logger.debug(f"Creating SQLite statements for project '{project_name}'")
-        for k, v in d.items():  # (int, namedtuple)
-            logger.debug(f"Creating SQLite statement for project '{project_name}', "
-                         f"page {k}...")
-            aqs = 0 if v.error is None else 1
-            if k == 1:
-                query = \
-                    craft_sqlite_project_names_page_update(project_name=project_name,
-                                                           page=k,
-                                                           api_has_been_queried=1,
-                                                           api_query_succeeded=aqs)
-
-                execute_args = \
-                    (conn, query,
-                     (None, Binary(v.content)) if v.error is None else (v.error, None))
-
-            else:
-                query = craft_sqlite_project_names_page_insert()
-                execute_args = (conn, query, (project_name,
-                                              k,  # page
-                                              1,  # api_has_been_queried
-                                              aqs,  # api_query_succeeded
-                                              v.error,  # execution_error
-                                              v.content,  # contributors
-                                              datetime.now()))  # ts
-            # execute_args_list.append(execute_args)
-            yield execute_args
-            logger.debug("Done creating SQLite statements for project "
-                         f"'{project_name}'")
-    # return execute_args_list
+        logger.debug(f"Creating SQLite statement for project '{project_name}', "
+                     f"page {page}...")
+        aqs = 1 if ce.error is None else 0  # api_queried_successfully
+        if page == 1:
+            query = \
+                craft_sqlite_project_names_page_update(project_name=project_name,
+                                                       page=page,
+                                                       api_has_been_queried=1,
+                                                       api_query_succeeded=aqs)
+            execute_args = \
+                (conn, query,
+                 (None, Binary(ce.content)) if ce.error is None else (ce.error, None))
+        else:
+            query = craft_sqlite_project_names_page_insert()
+            execute_args = (conn, query, (project_name,
+                                          page,  # page
+                                          1,  # api_has_been_queried
+                                          aqs,  # api_query_succeeded
+                                          ce.error,  # execution_error
+                                          ce.content,  # contributors
+                                          datetime.now()))  # ts
+        yield execute_args
+        logger.debug("Done creating SQLite statements for project "
+                     f"'{project_name}'")
 
 
 def main():
@@ -105,7 +109,7 @@ def main():
                            args.logfile, args.logfile_level)
 
     select_query = f"""select project_name as name from {args.table}
-    where api_query_succeeded is null group by project_name order by name desc limit 100"""
+    where api_query_succeeded is null group by project_name order by name desc limit 500"""
 
 
     with connect(args.DB) as conn:

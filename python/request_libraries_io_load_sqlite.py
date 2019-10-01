@@ -27,15 +27,19 @@ def main(args, logger):
         conn.row_factory = Row
         logger.debug(f"Created connection to sqlite DB {args.DB}")
         project_names_query_result = select_from_sqlite(conn, select_query)
-        project_names = [row['name'] for row in project_names_query_result]
-        if len(project_names) == 0:
-            return 1
+        project_names = (row['name'] for row in project_names_query_result)
+        # if len(project_names) == 0:
+        #     return 1
         successfully_updated = []
 
         for project_name in project_names:
+            s = Session()
             try:
-                GET_request = build_GET_request(URL % project_name)
-                content_and_error = execute_GET_request(GET_request)
+                # Request page 1 of API
+                get_request = build_GET_request(URL % project_name)
+                prepared_request = s.prepare_request(get_request)
+                response = s.send(prepared_request)
+                content_and_error = parse_request_response_content(get_request)
                 if content_and_error.error is None:
                     sqlite_update_query = craft_sqlite_project_names_update(
                         project_name=project_name,

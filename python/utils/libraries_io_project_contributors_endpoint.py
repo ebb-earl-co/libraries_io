@@ -8,6 +8,9 @@ positional argument; e.g.
 
 >>> python %s requests
 
+*N.b. the environment variable `APIKEY` must be set in order to send requests to
+the Libraries.io API.*
+
 The fetching of results is complicated by the `page` and `per_page` parameters
 of the API. The max `per_page` allowed is 100, so if there are more than 100
 contributors for a given project, the response's content must be checked and
@@ -113,14 +116,14 @@ def main(argv=None):
     get_request = build_get_request(URL % project_name, per_page=per_page)
     prepared_request = s.prepare_request(get_request)
     response = s.send(prepared_request)
-    response_contents = [response.json()]
+    response_contents = [parse_request_response_content(response)]
     next_page = response.links.get("next", None)
     while next_page is not None:
-        # The next_page["url"] has all parameters ready to go
+        # The next_page["url"] is URI with api_key
         get_request = build_get_request(next_page["url"], get_api_key=False)
         prepared_request = s.prepare_request(get_request)
         response = s.send(prepared_request)
-        response_contents.append(response.json())
+        response_contents.append(parse_request_response_content(response))
         next_page = response.links.get("next", None)
     else:
         return list(itertools.chain(*response_contents))
