@@ -34,7 +34,7 @@ content_and_error = namedtuple("ContentAndError", ["content", "error"])
 logger = logging.getLogger(__name__)
 
 
-def build_get_request(url, get_api_key=True, per_page=100, page=1):
+def build_get_request(url, get_api_key=True, per_page=100, page=None):
     """ Given url, return requests.get object that is prepared with
     the keywords 'url', 'params' passed. N.b. the params are created
     internally because they are taken from ENV variables or user input.
@@ -45,17 +45,18 @@ def build_get_request(url, get_api_key=True, per_page=100, page=1):
         per_page (int): the number of results to fetch
         page (int): the ith set of `per_page` results to fetch, i > 0
     Returns:
-        (requests.Request): the requests.Request object for further processing
+        (requests.Request): the requests.Request object with params set
     """
     def get_api_key():
         api_key = os.environ.get("APIKEY")
         if api_key is None:
-            print("'APIKEY' is not among environment variables!", file=sys.stderr)
+            # print("'APIKEY' is not among environment variables!", file=sys.stderr)
             sys.exit(1)
 
         return api_key
 
-    params = {"per_page": per_page, "page": page}
+    params = dict(zip(("per_page", "page"),
+                      filter(lambda kwarg: kwarg is not None, (per_page, page))))
     if get_api_key:
         params.update({"api_key": get_api_key()})
     return Request("GET", url=url, params=params)

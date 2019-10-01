@@ -7,81 +7,110 @@ to sqlite. As the API rate limits to 60 per minute, 60 or fewer API calls
 will be made at a time, with `time.sleep` called between batches.
 """
 
-from time import sleep
+from functools import partial
+import itertools as it
+
+from ratelimit import limits
+from requests import Session
 
 from logger import return_logger
 from utils.libraries_io_project_contributors_endpoint import \
-    build_get_request, execute_get_request, URL
+    build_get_request, parse_request_response_content, URL
 from utils.utils import (connect, craft_sqlite_project_names_update,
-                         return_parser, select_from_sqlite,
-                         execute_sqlite_query, Binary, Row)
+                         craft_sqlite_project_names_page_insert, return_parser,
+                         select_from_sqlite, execute_sqlite_query, Binary, Row)
 
 
-def main(args, logger):
-    logger.debug(f"Arguments passed:\n{args}")
+def get_project_names_from_sqlite():
+    """ Execute `query` against `sqlite_db`, returning results as a
+    sqlite3.Cursor of sqlite3.Row objects
+    Args:
+        None
+    Returns:
+        (generator): of project_names
+    """
+    pass
 
-    select_query = f"""select project_name as name from {args.table}
-    where api_query_succeeded is null LIMIT {args.batch_size}"""
 
-    with connect(args.DB) as conn:
+def chunk(l, n):
+    """ Return an iterable representing `l` split into `n`-sized chunks
+    Args:
+        l (iterable): the iterable to divide
+        n (int): into how many chunks to divide `l`
+    Returns:
+        (iterable): of size `n`
+    """
+    for i in range(0, len(l), n):
+        yield l[i: i+n]
+
+
+@limits(calls=59, period=59)
+def request_with_session(session, project_name, prepared_request):
+    """ Call `session`.send() on `prepared_request` object, yielding
+    requests.Response object. If the Response object has a 'next' link,
+    get the link and prepare a GET request with it: then pass the prepared
+    request back to the function.
+
+    Args:
+        session (requests.Session): session in which to send requests
+        project_name (str): the name of the project that is being requested
+        prepared_request (requests.PreparedRequest): request ready to send
+    Yields:
+        (requests.Response): the response from prepared_request.url
+    """
+    response = session.send(prepared_request)
+    # in the response's PreparedRequest attribute, the url has &-delineated
+    # parameter key=value pairs. The page that was just requested is e.g.
+    # &page=1&... and is the only parameter that startswith page
+    page = \
+        int(next(filter(lambda param: param if param.startswith('page') else None,
+                        response.request.url.split('&')))[-1])
+    yield (project_name, page, response)
+    next_page = response.links.get('next')
+    if next_page is not None:
+        request = build_get_request(next_page['url'], False)
+        prepared_request = session.prepare_request(request)
+        # yield from request_with_session(session, project_name, prepared_request)
+
+
+def request_batch(batch):
+    """ Given a `batch` of tuples, execute the second value of the tuple in
+    the context of a requests.Session, returning a tuple of the first value of
+    the original tuple and the requests.Response object.
+    Args:
+        batch (iterable): iterable of (str, requests.Request) objects
+    Returns:
+        (iterable): of (str, requests.Response) objects
+    """
+    s = Session()
+    request_ = partial(request_with_session, s)
+
+    project_names_and_prepared_requests = \
+        map(lambda pn, request, s=s: (pn, s.prepare(request)), batch)
+    project_names_pages_responses = map(lambda pn_pr: request_(*pn_pr),
+                                        project_names_and_prepared_requests)
+
+
+def main():
+    query = """select project_name as name from project_names
+    where api_has_been_queried is null group by project_name"""
+    with connect('../libraries_io.db') as conn:
         conn.row_factory = Row
-        logger.debug(f"Created connection to sqlite DB {args.DB}")
-        project_names_query_result = select_from_sqlite(conn, select_query)
-        project_names = (row['name'] for row in project_names_query_result)
-        # if len(project_names) == 0:
-        #     return 1
-        successfully_updated = []
+        cur = conn.cursor()
+        project_names = [row['name'] for row in cur.execute(query)]
 
-        for project_name in project_names:
-            s = Session()
-            try:
-                # Request page 1 of API
-                get_request = build_GET_request(URL % project_name)
-                prepared_request = s.prepare_request(get_request)
-                response = s.send(prepared_request)
-                content_and_error = parse_request_response_content(get_request)
-                if content_and_error.error is None:
-                    sqlite_update_query = craft_sqlite_project_names_update(
-                        project_name=project_name,
-                        api_has_been_queried=1,
-                        api_query_succeeded=1
-                    )
-                    execute_args = (conn, sqlite_update_query,
-                                    (None, Binary(content_and_error.content)))
-                else:
-                    sqlite_update_query = craft_sqlite_project_names_update(
-                        project_name=project_name,
-                        api_has_been_queried=1,
-                        api_query_succeeded=0
-                    )
-                    execute_args = (conn, sqlite_update_query,
-                                    (content_and_error.error, None))
-                logger.debug(f"Updating record corresponding to '{project_name}'")
+    project_names_and_requests = \
+        ((project_name, build_get_request(project_name, True, 100, 1)) for project_name in project_names)
+    batches = chunk(project_names_and_requests, 60)
+    projects_pages_responses = map(request_batch, batches)
+    # TODO: map the above tuple through the craft_sqlite... function
+    sqlite_fields = map(craft_sqlite_record, projects_pages_responses)
 
-                return_code = execute_sqlite_query(*execute_args)
-                if return_code is not None:
-                    logger.info(f"Record corresponding to '{project_name}' "
-                                "updated successfully")
-                    successfully_updated.append(project_name)
-                else:
-                    logger.warning(f"Record corresponding to '{project_name}' "
-                                   "DID NOT UPDATE")
-                    continue
-            except:
-                logger.error(f"Exception occurred for project {project_name}",
-                             exc_info=True)
-        else:
-            logger.info(f"Project names\n{successfully_updated}\n"
-                        "updated successfully: "
-                        f"{round(len(successfully_updated)/len(project_names)*100, 2)}%")
-            return 0
+    with connect('../libraries_io.db') as conn:
+        sqlite_args = map(lambda fields: (conn, fields), sqlite_fields)
+        return_codes = it.starmap(execute_sqlite_query, sqlite_args)
+        successfully_updated = sum(map(lambda rc: rc == 0, return_codes))
+
 
 if __name__ == "__main__":
-    args = return_parser().parse_args()
-    logger = return_logger(__name__, args.log_level,
-                           args.logfile, args.logfile_level)
-
-    still_project_names_left = main(args, logger)
-    while still_project_names_left != 1:
-        sleep(args.time_to_sleep)
-        still_project_names_left = main(args, logger)
+    main()
