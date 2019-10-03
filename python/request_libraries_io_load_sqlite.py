@@ -16,7 +16,7 @@ from requests import Session
 from logger import return_logger
 from utils.libraries_io_project_contributors_endpoint import \
     build_get_request, parse_request_response_content, URL
-from utils.utils import (connect, craft_sqlite_project_names_update,
+from utils.utils import (connect, craft_sqlite_project_names_page_update,
                          craft_sqlite_project_names_page_insert, return_parser,
                          select_from_sqlite, execute_sqlite_query, Binary, Row)
 
@@ -35,7 +35,7 @@ def get_project_names_from_sqlite():
 def chunk(l, n):
     """ Return an iterable representing `l` split into `n`-sized chunks
     Args:
-        l (iterable): the iterable to divide
+        l (list): list the contents of which will be generated in chunks
         n (int): into how many chunks to divide `l`
     Returns:
         (iterable): of size `n`
@@ -89,6 +89,10 @@ def request_batch(batch):
         map(lambda pn, request, s=s: (pn, s.prepare(request)), batch)
     project_names_pages_responses = map(lambda pn_pr: request_(*pn_pr),
                                         project_names_and_prepared_requests)
+    # Return an it.groupby object here? So that the `api_queried_successful`
+    # field can be calculated for a project? Or just go forward with having the
+    # switch pertain to the (project_name, page) tuple..?
+    return project_names_pages_responses
 
 
 def main():
@@ -102,9 +106,9 @@ def main():
     project_names_and_requests = \
         ((project_name, build_get_request(project_name, True, 100, 1)) for project_name in project_names)
     batches = chunk(project_names_and_requests, 60)
-    projects_pages_responses = map(request_batch, batches)
+    projects_pages_responses = it.chain.from_iterable(map(request_batch, batches))
     # TODO: map the above tuple through the craft_sqlite... function
-    sqlite_fields = map(craft_sqlite_record, projects_pages_responses)
+    sqlite_fields = map(lambda x: x, projects_pages_responses)
 
     with connect('../libraries_io.db') as conn:
         sqlite_args = map(lambda fields: (conn, fields), sqlite_fields)

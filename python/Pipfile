@@ -7,6 +7,7 @@ verify_ssl = true
 ipython = "*"
 pytest = "*"
 hypothesis = "*"
+responses = "*"
 
 [packages]
 py2neo = "*"

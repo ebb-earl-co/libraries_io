@@ -47,18 +47,18 @@ def build_get_request(url, get_api_key=True, per_page=100, page=None):
     Returns:
         (requests.Request): the requests.Request object with params set
     """
-    def get_api_key():
+    def get_api_key_():
         api_key = os.environ.get("APIKEY")
         if api_key is None:
-            # print("'APIKEY' is not among environment variables!", file=sys.stderr)
+            print("'APIKEY' is not among environment variables!", file=sys.stderr)
             sys.exit(1)
 
         return api_key
 
-    params = dict(zip(("per_page", "page"),
-                      filter(lambda kwarg: kwarg is not None, (per_page, page))))
+    params = {k:v for k, v in (("per_page", per_page), ("page", page))
+              if v is not None}
     if get_api_key:
-        params.update({"api_key": get_api_key()})
+        params["api_key"] = get_api_key_()
     return Request("GET", url=url, params=params)
 
 
