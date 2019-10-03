@@ -21,27 +21,17 @@ from utils.utils import (connect, craft_sqlite_project_names_page_update,
                          select_from_sqlite, execute_sqlite_query, Binary, Row)
 
 
-def get_project_names_from_sqlite():
-    """ Execute `query` against `sqlite_db`, returning results as a
-    sqlite3.Cursor of sqlite3.Row objects
+def chunk(i, n):
+    """ Return an iterable representing `l` split into `n`-sized chunks.
+    Credit to https://stackoverflow.com/a/22049333
     Args:
-        None
+        i (iterable): iterable the contents of which will be chunked
+        n (int): into how many chunks to divide `i`
     Returns:
-        (generator): of project_names
+        (tuple): of size `n`
     """
-    pass
-
-
-def chunk(l, n):
-    """ Return an iterable representing `l` split into `n`-sized chunks
-    Args:
-        l (list): list the contents of which will be generated in chunks
-        n (int): into how many chunks to divide `l`
-    Returns:
-        (iterable): of size `n`
-    """
-    for i in range(0, len(l), n):
-        yield l[i: i+n]
+    to_be_iterated = iter(i)
+    return iter(lambda: tuple(it.islice(to_be_iterated, n)), ())
 
 
 @limits(calls=59, period=59)
@@ -104,9 +94,12 @@ def main():
         project_names = [row['name'] for row in cur.execute(query)]
 
     project_names_and_requests = \
-        ((project_name, build_get_request(project_name, True, 100, 1)) for project_name in project_names)
+        ((project_name, build_get_request(URL % project_name, True, 100, 1))
+         for project_name in project_names)
     batches = chunk(project_names_and_requests, 60)
-    projects_pages_responses = it.chain.from_iterable(map(request_batch, batches))
+    projects_pages_responses = it.chain.from_iterable(
+        map(request_batch, batches)
+    )
     # TODO: map the above tuple through the craft_sqlite... function
     sqlite_fields = map(lambda x: x, projects_pages_responses)
 
@@ -114,6 +107,8 @@ def main():
         sqlite_args = map(lambda fields: (conn, fields), sqlite_fields)
         return_codes = it.starmap(execute_sqlite_query, sqlite_args)
         successfully_updated = sum(map(lambda rc: rc == 0, return_codes))
+
+    return successfully_updated
 
 
 if __name__ == "__main__":

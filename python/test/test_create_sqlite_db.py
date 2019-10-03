@@ -3,7 +3,7 @@
 
 import os
 
-from create_sqlite_db import connect, main
+from utils.create_sqlite_db import connect, main
 
 
 def test_main_no_argument_passed(capsys):

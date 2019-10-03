@@ -5,11 +5,10 @@ from string import printable
 
 from hypothesis import given, strategies as st
 import pytest as pt
-from py2neo import Graph
 from py2neo.database import Cursor
 
 from test_helpers.test_graph_database import TESTGRAPHDB, Language
-from merge_contributors_with_py2neo import *
+from merge_contributors import *
 
 
 def test_get_graph_password_env_variable_not_set(monkeypatch):
@@ -34,7 +33,7 @@ def test_main_stderr_when_env_variable_not_set(monkeypatch, capsys):
     with pt.raises(SystemExit):
         main()
     _, err = capsys.readouterr()
-    # assert err == f"Environment variable {GRAPHDBPASS} not set. Cannot access graph DB\n"
+    assert err == f"Environment variable {GRAPHDBPASS} not set. Cannot access graph DB\n"
 
 
 @pt.fixture(scope="function")

@@ -2,18 +2,18 @@
 # -*- coding: utf-8 -*-
 
 from itertools import chain
-from string import printable
+from string import ascii_letters, digits, printable
 import os
 import sys
 import types
 
-from hypothesis import given, strategies as st
+from hypothesis import assume, given, strategies as st
 from hypothesis.provisional import urls
 import pytest as pt
-import responses
 from requests import Request
 
 from request_libraries_io_load_sqlite import *
+
 
 def get_api_key():
     api_key = os.environ.get("APIKEY")
@@ -24,48 +24,38 @@ def get_api_key():
     return api_key
 
 
-@given(st.lists(st.none()), st.integers())
-def test_chunk__is_generator(l, n):
-    chunks = chunk(l, n)
-    assert isinstance(chunks, types.GeneratorType)
+@given(st.iterables(st.none()), st.integers())
+def test_chunk__is_iterator(i, n):
+    chunks = chunk(i, n)
+    assert iter(chunks) is chunks
 
 
-@given(st.lists(st.none(), min_size=0, max_size=0), st.integers(min_value=1))
-def test_chunk__empty_list_yields_empty_generator(l, n):
-    chunks = chunk(l, n)
+@given(st.iterables(st.none(), min_size=0, max_size=0),
+       st.integers(min_value=1, max_value=1000))
+def test_chunk__empty_list_yields_empty_generator(i, n):
+    chunks = chunk(i, n)
     with pt.raises(StopIteration):
         next(chunks)
 
 
-@given(st.lists(st.none(), min_size=1), st.integers(min_value=1))
-def test_chunk__chunks_recombine_into_original_list(l, n):
-    chunks = chunk(l, n)
-    all_chunks_list = list(chain.from_iterable(chunks))
-    assert all_chunks_list == l
+# @given(st.iterables(st.none(), min_size=1), st.integers(min_value=1))
+# def test_chunk__chunks_recombine_into_original_list(l, n):
+#     chunks = chunk(l, n)
+#     all_chunks_list = list(chain.from_iterable(chunks))
+#     assert all_chunks_list == l
 
 
-@given(st.lists(st.none(), min_size=1), st.integers(min_value=1))
+@given(st.lists(st.none(), min_size=1),
+       st.integers(min_value=1, max_value=1000))
 def test_chunk__partitions_into_n_chunks(l, n):
     chunks = chunk(l, n)
     if len(l) == 1:
-        assert list(chunks) == [l]
+        assert list(chunks) == [(l[0],)]
     elif len(l) % n == 0:
         assert all(len(chunk) == n for chunk in chunks)
     else:
         remainder = list(chunks)[-1]
         assert len(remainder) == len(l) % n
-
-
-@pt.fixture
-def mocked_responses():
-    with responses.RequestsMock() as rsps:
-        yield rsps
-
-
-@pt.fixture
-def session():
-    s = Session()
-    yield s
 
 
 def test_build_get_request__test_get_api_key__env_var_not_set_exits_1(capsys, monkeypatch):
@@ -157,3 +147,56 @@ def test_build_get_request__get_api_key_True_per_page_NONE_page_INT(monkeypatch,
     assert isinstance(r, Request)
     assert r.url == url
     assert r.params == {'page': page, 'api_key': apikey}
+
+
+@st.composite
+def valid_project_name(draw):
+    azAZ09 = ascii_letters + digits
+    valid_python_name = azAZ09 + '.' + '-' + '_'
+    name = draw(st.text(alphabet=valid_python_name, min_size=2))
+    return name
+
+
+@given(st.data())
+def test_project_names_and_requests__single(monkeypatch, data):
+    monkeypatch.setenv('APIKEY',
+                       data.draw(st.text(alphabet=ascii_letters, min_size=1)),
+                       prepend=False)
+    project_name = data.draw(valid_project_name())
+    project_name_and_request = \
+        (project_name,
+         build_get_request(data.draw(urls()) + project_name, True, 100, 1))
+    assert isinstance(project_name_and_request[0], str)
+    assert isinstance(project_name_and_request[1], Request)
+
+
+@given(st.data())
+def test_project_names_and_requests__many(monkeypatch, data):
+    monkeypatch.setenv('APIKEY',
+                       data.draw(st.text(alphabet=ascii_letters, min_size=1)),
+                       prepend=False)
+    num_projects = data.draw(st.integers(min_value=2, max_value=100))
+    project_names = [data.draw(valid_project_name()) for _ in range(num_projects)]
+    project_names_and_requests = \
+        ((project_name, build_get_request(URL % project_name, True, 100, 1))
+         for project_name in project_names)
+    is_str_instance = lambda obj: isinstance(obj, str)
+    is_Request_instance = lambda obj: isinstance(obj, Request)
+    is_instance_tuples = map(lambda t: (is_str_instance(t[0]), is_Request_instance(t[1])),
+                             project_names_and_requests)
+    assert all(all(tup) for tup in is_instance_tuples)
+
+
+@given(st.data())
+def test_batches(monkeypatch, data):
+    monkeypatch.setenv('APIKEY',
+                       data.draw(st.text(alphabet=ascii_letters, min_size=1)),
+                       prepend=False)
+    num_projects = data.draw(st.integers(min_value=2, max_value=120))
+    project_names = [data.draw(valid_project_name()) for _ in range(num_projects)]
+    project_names_and_requests = \
+        ((project_name, build_get_request(URL % project_name, True, 100, 1))
+         for project_name in project_names)
+    batches = chunk(project_names_and_requests, 60)
+    assert all(isinstance(batch, tuple) for batch in batches)
+
