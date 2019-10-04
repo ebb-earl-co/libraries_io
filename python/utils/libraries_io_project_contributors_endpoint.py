@@ -63,11 +63,10 @@ def build_get_request(url, get_api_key=True, per_page=100, page=None):
 
 
 def parse_request_response_content(r):
-    """ Given a `requests.Response` object, execute the GET request and return one of
-    three JSON objects: 1) requests.HTTPError that arose; 2) Other Python
-    exception that arose; or 3) The response in the form {"data": <response>}
-    from the API.
-
+    """ Given a `requests.Response` object, execute the GET request and return
+    namedtuple with the first field None in the case of exception having arisen,
+    but r.content if no exception, and second field the exception that arose,
+    or None in the case of no exception.
     Args:
         r (requests.Reponse): response from requests.get operation
     Returns:

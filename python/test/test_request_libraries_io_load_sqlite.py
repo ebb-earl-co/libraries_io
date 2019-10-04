@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+
 from itertools import chain
 from string import ascii_letters, digits, printable
 import os
@@ -10,9 +11,11 @@ import types
 from hypothesis import assume, given, strategies as st
 from hypothesis.provisional import urls
 import pytest as pt
-from requests import Request
+from requests import get, Request, Session
+import responses
 
 from request_libraries_io_load_sqlite import *
+from utils.libraries_io_project_contributors_endpoint import content_and_error
 
 
 def get_api_key():
@@ -188,7 +191,7 @@ def test_project_names_and_requests__many(monkeypatch, data):
 
 
 @given(st.data())
-def test_batches(monkeypatch, data):
+def test_batches_produces_tuples(monkeypatch, data):
     monkeypatch.setenv('APIKEY',
                        data.draw(st.text(alphabet=ascii_letters, min_size=1)),
                        prepend=False)
@@ -197,6 +200,48 @@ def test_batches(monkeypatch, data):
     project_names_and_requests = \
         ((project_name, build_get_request(URL % project_name, True, 100, 1))
          for project_name in project_names)
-    batches = chunk(project_names_and_requests, 60)
+    batches = list(chunk(project_names_and_requests, 60))
     assert all(isinstance(batch, tuple) for batch in batches)
+    assert all(len(batch) == 60 for batch in batches[:-1])
 
+
+@responses.activate
+@given(valid_project_name())
+def test_parse_request_response_content__429_status_code(pn):
+    responses.add(responses.GET, URL % pn, status=429)
+    resp = get(URL % pn)
+    c_and_e = parse_request_response_content(resp)
+    assert resp.status_code == 429
+    assert isinstance(c_and_e, content_and_error)
+
+
+@responses.activate
+@given(valid_project_name())
+def test_parse_request_response_content__429_content_and_error(pn):
+    responses.add(responses.GET, URL % pn, status=429)
+    resp = get(URL % pn)
+    c_and_e = parse_request_response_content(resp)
+    assert c_and_e.content is None
+    assert 'HTTPError' in c_and_e.error
+
+
+@responses.activate
+@given(valid_project_name())
+def test_parse_request_response_content__200(pn):
+    responses.add(responses.GET, URL % pn, status=200)
+    resp = get(URL % pn)
+    c_and_e = parse_request_response_content(resp)
+    assert resp.status_code == 200
+    assert isinstance(c_and_e, content_and_error)
+    assert c_and_e.error is None
+    assert c_and_e.content is not None
+
+
+@responses.activate
+@given(valid_project_name())
+def test_parse_request_response_content__exception_occurred(pn):
+    responses.add(responses.GET, URL % pn, body=Exception('...'))
+    with pt.raises(Exception):
+        resp = get(URL % pn)
+        c_and_e = parse_request_response_content(resp)
+        assert 'Exception' in c_and_e.error

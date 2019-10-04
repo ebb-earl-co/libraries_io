@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import itertools as it
 import logging
 from argparse import ArgumentParser, RawTextHelpFormatter
 from sqlite3 import connect, IntegrityError, OperationalError, Binary, Row
@@ -125,3 +126,16 @@ def select_from_sqlite(conn, query, params=None, num_retries=3):
         logging.warning("Could not execute SELECT query successfully "
                         f"even after {num_retries} retries")
         return
+
+
+def partition(pred, iterable):
+    '''Use a predicate to partition entries into false entries and true entries.
+    From https://docs.python.org/3/library/itertools.html#itertools-recipes
+    Args:
+        pred (callable): the determiner of truthiness for each element of `iterable`
+        iterable (iterable): the iterable to separate by truthiness
+    Returns:
+        (tuple): of iterables, each an iterator of elements from `iterable`
+    '''
+    t1, t2 = it.tee(iterable)
+    return it.filterfalse(pred, t1), filter(pred, t2)

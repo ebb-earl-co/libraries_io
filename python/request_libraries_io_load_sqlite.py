@@ -7,11 +7,13 @@ to sqlite. As the API rate limits to 60 per minute, 60 or fewer API calls
 will be made at a time, with `time.sleep` called between batches.
 """
 
+from collections import namedtuple
 from functools import partial
 import itertools as it
+from typing import *
 
 from ratelimit import limits
-from requests import Session
+from requests import Response, Session
 
 from logger import return_logger
 from utils.libraries_io_project_contributors_endpoint import \
@@ -28,7 +30,7 @@ def chunk(i, n):
         i (iterable): iterable the contents of which will be chunked
         n (int): into how many chunks to divide `i`
     Returns:
-        (tuple): of size `n`
+        (tuple): of size less than or equal to `n`
     """
     to_be_iterated = iter(i)
     return iter(lambda: tuple(it.islice(to_be_iterated, n)), ())
@@ -88,20 +90,26 @@ def request_batch(batch):
 def main():
     query = """select project_name as name from project_names
     where api_has_been_queried is null group by project_name"""
+
     with connect('../libraries_io.db') as conn:
         conn.row_factory = Row
         cur = conn.cursor()
-        project_names = [row['name'] for row in cur.execute(query)]
+        project_names: List[str] = [row['name'] for row in cur.execute(query)]
 
-    project_names_and_requests = \
+    project_names_and_requests: Generator[Tuple[str, Request]] = \
         ((project_name, build_get_request(URL % project_name, True, 100, 1))
          for project_name in project_names)
-    batches = chunk(project_names_and_requests, 60)
-    projects_pages_responses = it.chain.from_iterable(
-        map(request_batch, batches)
-    )
-    # TODO: map the above tuple through the craft_sqlite... function
-    sqlite_fields = map(lambda x: x, projects_pages_responses)
+
+    batches: Iterator[tuple] = chunk(project_names_and_requests, 60)
+
+    projects_pages_responses: Iterator[Tuple[str, int, Response]] = \
+        it.chain.from_iterable(map(request_batch, batches))
+
+    projects_pages_content_and_errors: Iterator[Tuple[str, int, namedtuple]] = \
+        map(lambda tup: (tup[0], tup[1], parse_request_response_content(tup[2])),
+            projects_pages_responses)
+
+    sqlite_fields
 
     with connect('../libraries_io.db') as conn:
         sqlite_args = map(lambda fields: (conn, fields), sqlite_fields)
