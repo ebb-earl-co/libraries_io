@@ -64,7 +64,7 @@ def main(argv=None):
           file=sys.stderr)
     projects_cursor = execute_cypher_match_statement(g, projects_query)
 
-    print("Converting py2neo Cursor into generator of dicts\n", file=sys.stderr)
+    print("Converting py2neo Cursor into list of dicts\n", file=sys.stderr)
     projects_nodes =  list(map(lambda r: r.get('p'), projects_cursor))
 
     with connect(DB) as conn:

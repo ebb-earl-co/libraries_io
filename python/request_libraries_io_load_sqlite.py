@@ -83,7 +83,7 @@ def main():
         where api_has_been_queried is null group by project_name
         LIMIT {args.batch_size}"""
 
-    with connect(args.DB) as conn:
+    with connect(args.DB, timeout=10) as conn:
         conn.row_factory = Row
         cur = conn.cursor()
         logger.info(f"Executing\n{query}\nto {args.DB}")
@@ -131,7 +131,7 @@ def main():
          page_ge_2_record_insert_queries_parameters)
     )
 
-    with connect('../libraries_io.db') as conn:
+    with connect(args.DB, timeout=10) as conn:
         sqlite_args: Iterator[Tuple] = \
             map(lambda tup: (conn, *tup), queries_and_parameters)
         return_codes: Iterator[Union[int, None]] = \
