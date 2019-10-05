@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "dae5469668b57c68a8939eb48c6bf1e818bd48e6a21dd786828d5cfb5705c0da"
+            "sha256": "3cef8b7e179303165fc740c0ed36d7c1e8ef97e0b295604580b83854ace3e281"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -16,6 +16,14 @@
         ]
     },
     "default": {
+        "backoff": {
+            "hashes": [
+                "sha256:c7187f15339e775aec926dc6e5e42f8a3ad7d3c2b9a6ecae7b535000f70cd838",
+                "sha256:d340bb6f36d025c04214b8925112d8456970e5f28dda46e4f1133bf5c622cb0a"
+            ],
+            "index": "pypi",
+            "version": "==1.8.0"
+        },
         "certifi": {
             "hashes": [
                 "sha256:e4f3620cfea4f83eedc95b24abd9cd56f3c4b146dd0177e83a21b4eb49e21e50",
@@ -53,16 +61,16 @@
         },
         "neo4j-driver": {
             "hashes": [
-                "sha256:59c6894153fba97f2b7e223f795de395f2fbf094330da809107fd59423338b25"
+                "sha256:d521009115f4a875029b1dc24ce85bd4960ed0b424fb43c6d527786371c4f9c9"
             ],
             "index": "pypi",
-            "version": "==1.7.4"
+            "version": "==1.7.5"
         },
         "neobolt": {
             "hashes": [
-                "sha256:fa9efe4a4defbdc63fc3f1e552d503727049586c59d8a3acf5188a2cf1a45dce"
+                "sha256:56b86b8b2c3facdd54589e60ecd22e0234d6f40645ab2e2cf87ef0cd79df20af"
             ],
-            "version": "==1.7.13"
+            "version": "==1.7.15"
         },
         "neotime": {
             "hashes": [
@@ -72,11 +80,11 @@
         },
         "prompt-toolkit": {
             "hashes": [
-                "sha256:11adf3389a996a6d45cc277580d0d53e8a5afd281d0c9ec71b28e6f121463780",
-                "sha256:2519ad1d8038fd5fc8e770362237ad0364d16a7650fb5724af6997ed5515e3c1",
-                "sha256:977c6583ae813a37dc1c2e1b715892461fcbdaa57f6fc62f33a528c4886c8f55"
+                "sha256:46642344ce457641f28fc9d1c9ca939b63dadf8df128b86f1b9860e59c73a5e4",
+                "sha256:e7f8af9e3d70f514373bf41aa51bc33af12a6db3f71461ea47fea985defb2c31",
+                "sha256:f15af68f66e664eaa559d4ac8a928111eebd5feda0c11738b5998045224829db"
             ],
-            "version": "==2.0.9"
+            "version": "==2.0.10"
         },
         "py2neo": {
             "hashes": [
@@ -189,11 +197,11 @@
         },
         "hypothesis": {
             "hashes": [
-                "sha256:4d836ca6c44014c3a8793b210773c97fbff76407549e9c3f24f83f16afce4f5f",
-                "sha256:665682cd29e94e0bd9da9f0bc5386a30fc149f4c44f575f60e3de64797cf7954"
+                "sha256:966580e397c9f35810f5d8ee129f34709691f0ac348f70c10c6599401971ba39",
+                "sha256:a0fb2b63f3244e220917d5864c9963253ac22c2e273030b8fff7c0fefa79afb3"
             ],
             "index": "pypi",
-            "version": "==4.38.2"
+            "version": "==4.38.3"
         },
         "idna": {
             "hashes": [
@@ -277,11 +285,11 @@
         },
         "prompt-toolkit": {
             "hashes": [
-                "sha256:11adf3389a996a6d45cc277580d0d53e8a5afd281d0c9ec71b28e6f121463780",
-                "sha256:2519ad1d8038fd5fc8e770362237ad0364d16a7650fb5724af6997ed5515e3c1",
-                "sha256:977c6583ae813a37dc1c2e1b715892461fcbdaa57f6fc62f33a528c4886c8f55"
+                "sha256:46642344ce457641f28fc9d1c9ca939b63dadf8df128b86f1b9860e59c73a5e4",
+                "sha256:e7f8af9e3d70f514373bf41aa51bc33af12a6db3f71461ea47fea985defb2c31",
+                "sha256:f15af68f66e664eaa559d4ac8a928111eebd5feda0c11738b5998045224829db"
             ],
-            "version": "==2.0.9"
+            "version": "==2.0.10"
         },
         "ptyprocess": {
             "hashes": [
@@ -344,10 +352,10 @@
         },
         "traitlets": {
             "hashes": [
-                "sha256:9c4bd2d267b7153df9152698efb1050a5d84982d3384a37b2c1f7723ba3e7835",
-                "sha256:c6cb5e6f57c5a9bdaa40fa71ce7b4af30298fbab9ece9815b5d995ab6217c7d9"
+                "sha256:70b4c6a1d9019d7b4f6846832288f86998aa3b9207c6821f3578a6a6a467fe44",
+                "sha256:d023ee369ddd2763310e4c3eae1ff649689440d4ae59d7485eb4cfbbe3e359f7"
             ],
-            "version": "==4.3.2"
+            "version": "==4.3.3"
         },
         "urllib3": {
             "hashes": [

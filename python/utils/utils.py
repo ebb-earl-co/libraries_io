@@ -29,9 +29,9 @@ def return_parser():
     p.add_argument('table', type=str,
                    help='The name of the table in the sqlite DB specified '
                    'in the `DB` argument')
-    # p.add_argument('batch_size', type=int,
-    #                help='The amount of API calls to execute before sleeping; '
-    #                'n.b. the API has a rate limit of 60 per minute')
+    p.add_argument('batch_size', type=int,
+                   help='The amount of API calls to execute before sleeping; '
+                   'n.b. the API has a rate limit of 60 per minute')
     # p.add_argument('time_to_sleep', type=int,
     #                help='Time (s) for script to pause between API batches')
     p.add_argument("-l", "--log", dest="log_level", default='INFO',
@@ -48,11 +48,12 @@ def return_parser():
     return p
 
 
-def craft_sqlite_project_names_page_insert():
+def craft_sqlite_project_names_insert():
     """ Return an insert statement corresponding to project_names to pass to
     sqlite3.Connection.cursor.execute()
     """
-    update_query = f"""INSERT INTO project_names (
+
+    insert_query = """INSERT INTO project_names (
                     project_name,
                     page,
                     api_has_been_queried,
@@ -60,13 +61,13 @@ def craft_sqlite_project_names_page_insert():
                     execution_error,
                     contributors,
                     ts) VALUES (?, ?, ?, ?, ?, ?, ?);"""
-    return update_query
+    return insert_query
 
 
-def craft_sqlite_project_names_page_update(project_name,
-                                           page,
-                                           api_has_been_queried,
-                                           api_query_succeeded):
+def craft_sqlite_project_names_update(project_name,
+                                      page,
+                                      api_has_been_queried,
+                                      api_query_succeeded):
     """ Given values for each field of the `project_names` table,
     return a tuple of the parameterized update statement and the record
     to pass to sqlite3.Connection.cursor.execute()
@@ -129,7 +130,7 @@ def select_from_sqlite(conn, query, params=None, num_retries=3):
 
 
 def partition(pred, iterable):
-    '''Use a predicate to partition entries into false entries and true entries.
+    '''Use a predicate to partition entries into true entries and false entries.
     From https://docs.python.org/3/library/itertools.html#itertools-recipes
     Args:
         pred (callable): the determiner of truthiness for each element of `iterable`
@@ -138,4 +139,17 @@ def partition(pred, iterable):
         (tuple): of iterables, each an iterator of elements from `iterable`
     '''
     t1, t2 = it.tee(iterable)
-    return it.filterfalse(pred, t1), filter(pred, t2)
+    return filter(pred, t1), it.filterfalse(pred, t2)
+
+
+def chunk(i, n):
+    """ Return an iterable representing `i` split into `n`-sized chunks.
+    Credit to https://stackoverflow.com/a/22049333
+    Args:
+        i (iterable): iterable the contents of which will be chunked
+        n (int): into how many chunks to divide `i`
+    Returns:
+        (tuple): of size less than or equal to `n`
+    """
+    to_be_iterated = iter(i)
+    return iter(lambda: tuple(it.islice(to_be_iterated, n)), ())

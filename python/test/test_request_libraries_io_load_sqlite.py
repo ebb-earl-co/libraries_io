@@ -245,3 +245,38 @@ def test_parse_request_response_content__exception_occurred(pn):
         resp = get(URL % pn)
         c_and_e = parse_request_response_content(resp)
         assert 'Exception' in c_and_e.error
+
+
+@pt.fixture
+def response_w_3_pages():
+    with responses.RequestsMock() as rsps:
+        url = '?'.join((URL % 'foobar', 'page=1&per_page=100'))
+        rsps.add(responses.GET,
+                 url,
+                 headers={'Link': '<https://libraries.io/api/Pypi/foobar/contributors?page=3&per_page=100>; rel="last", <https://libraries.io/api/Pypi/foobar/contributors?page=2&per_page=100>; rel="next"'},
+                 status=200)
+        yield rsps
+
+@pt.fixture
+def mocked_responses():
+    with responses.RequestsMock(assert_all_requests_are_fired=False) as rsps:
+        yield rsps
+
+
+@pt.fixture(scope="function")
+def session():
+    s = Session()
+    yield s
+
+
+@responses.activate
+@given(valid_project_name())
+def test_request_with_session__single_page(mocked_responses, pn):
+    url = '?'.join((URL % pn, 'page=1&per_page=100'))
+    mocked_responses.add(responses.GET, url, status=200)
+    resp = get(URL % pn, params={'page': 1, 'per_page': 100})
+    assert resp.status == 200
+    # pr = session.prepare_request(r)
+    # resp = session.send(pr)
+    # r = Request('GET', '?'.join((URL % 'foobar', 'page=1&per_page=100')))
+    # rws = request_with_session(session, pn, pr)

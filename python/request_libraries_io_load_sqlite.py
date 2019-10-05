@@ -12,30 +12,20 @@ from functools import partial
 import itertools as it
 from typing import *
 
-from ratelimit import limits
+from backoff import on_exception, expo
+from ratelimit import limits, sleep_and_retry, RateLimitException
 from requests import Response, Session
 
 from logger import return_logger
 from utils.libraries_io_project_contributors_endpoint import \
-    build_get_request, parse_request_response_content, URL
-from utils.utils import (connect, craft_sqlite_project_names_page_update,
-                         craft_sqlite_project_names_page_insert, return_parser,
-                         select_from_sqlite, execute_sqlite_query, Binary, Row)
+    build_get_request, content_and_error, parse_request_response_content, URL
+from utils.utils import (chunk, connect, craft_sqlite_project_names_update,
+                         craft_sqlite_project_names_insert, partition,
+                         return_parser, select_from_sqlite,
+                         execute_sqlite_query, Binary, Row)
 
 
-def chunk(i, n):
-    """ Return an iterable representing `l` split into `n`-sized chunks.
-    Credit to https://stackoverflow.com/a/22049333
-    Args:
-        i (iterable): iterable the contents of which will be chunked
-        n (int): into how many chunks to divide `i`
-    Returns:
-        (tuple): of size less than or equal to `n`
-    """
-    to_be_iterated = iter(i)
-    return iter(lambda: tuple(it.islice(to_be_iterated, n)), ())
-
-
+@on_exception(expo, RateLimitException, max_tries=10)
 @limits(calls=59, period=59)
 def request_with_session(session, project_name, prepared_request):
     """ Call `session`.send() on `prepared_request` object, yielding
@@ -51,18 +41,16 @@ def request_with_session(session, project_name, prepared_request):
         (requests.Response): the response from prepared_request.url
     """
     response = session.send(prepared_request)
-    # in the response's PreparedRequest attribute, the url has &-delineated
-    # parameter key=value pairs. The page that was just requested is e.g.
-    # &page=1&... and is the only parameter that startswith page
     page = \
         int(next(filter(lambda param: param if param.startswith('page') else None,
                         response.request.url.split('&')))[-1])
+    logger.info(f"Sent request for project '{project_name}', page {page}")
     yield (project_name, page, response)
-    next_page = response.links.get('next')
+    next_page = response.links.get('next', None)
     if next_page is not None:
         request = build_get_request(next_page['url'], False)
         prepared_request = session.prepare_request(request)
-        # yield from request_with_session(session, project_name, prepared_request)
+        yield from request_with_session(session, project_name, prepared_request)
 
 
 def request_batch(batch):
@@ -75,48 +63,82 @@ def request_batch(batch):
         (iterable): of (str, requests.Response) objects
     """
     s = Session()
-    request_ = partial(request_with_session, s)
+    request_: Callable = partial(request_with_session, s)
 
-    project_names_and_prepared_requests = \
-        map(lambda pn, request, s=s: (pn, s.prepare(request)), batch)
-    project_names_pages_responses = map(lambda pn_pr: request_(*pn_pr),
-                                        project_names_and_prepared_requests)
-    # Return an it.groupby object here? So that the `api_queried_successful`
-    # field can be calculated for a project? Or just go forward with having the
-    # switch pertain to the (project_name, page) tuple..?
+    project_names_and_prepared_requests: Iterator[Tuple] = \
+        map(lambda tup, s=s: (tup[0], s.prepare_request(tup[1])), batch)
+    project_names_pages_responses_generators: Iterator[Generator[Tuple[str, int, Response]]] = \
+        map(lambda pn_pr: request_(*pn_pr), project_names_and_prepared_requests)
+    project_names_pages_responses: Iter[Tuple[str, int, Response]] = \
+        it.chain.from_iterable(project_names_pages_responses_generators)
     return project_names_pages_responses
 
 
 def main():
-    query = """select project_name as name from project_names
-    where api_has_been_queried is null group by project_name"""
+    args = return_parser().parse_args()
+    global logger
+    logger = return_logger(__file__, args.log_level, args.logfile)
 
-    with connect('../libraries_io.db') as conn:
+    query = f"""select project_name as name from {args.table}
+        where api_has_been_queried is null group by project_name
+        LIMIT {args.batch_size}"""
+
+    with connect(args.DB) as conn:
         conn.row_factory = Row
         cur = conn.cursor()
+        logger.info(f"Executing\n{query}\nto {args.DB}")
         project_names: List[str] = [row['name'] for row in cur.execute(query)]
 
     project_names_and_requests: Generator[Tuple[str, Request]] = \
         ((project_name, build_get_request(URL % project_name, True, 100, 1))
          for project_name in project_names)
 
-    batches: Iterator[tuple] = chunk(project_names_and_requests, 60)
+    batches: Iterator[Tuple[Tuple[str, Request]]] = \
+        chunk(project_names_and_requests, 60)
 
     projects_pages_responses: Iterator[Tuple[str, int, Response]] = \
         it.chain.from_iterable(map(request_batch, batches))
 
-    projects_pages_content_and_errors: Iterator[Tuple[str, int, namedtuple]] = \
+    projects_pages_content_and_errors: Iterator[Tuple[str, int, content_and_error]] = \
         map(lambda tup: (tup[0], tup[1], parse_request_response_content(tup[2])),
             projects_pages_responses)
 
-    sqlite_fields
+    # Add `api_has_been_queried` field as 1 for all records
+    projects_pages_ahbq_content_and_errors: Iterator[Tuple[str, int, int, content_and_error]] = \
+        map(lambda tup: (tup[0], tup[1], 1, tup[2]), projects_pages_content_and_errors)
+
+    # Add `api_query_succeeded` field as 1 or 0, depending on content_and_error
+    projects_pages_ahbq_aqs_content_and_errors: Iterator[Tuple[str, int, int, int, content_and_error]] = \
+        map(lambda tup: (tup[0], tup[1], tup[2], 1 if tup[3].error is None else 0, tup[3]),
+            projects_pages_ahbq_content_and_errors)
+
+    page_1_records, page_ge_2_records = \
+        partition(lambda tup: tup[1] == 1, projects_pages_ahbq_aqs_content_and_errors)
+    # Iterator[Tuple[str, int, int, int, content_and_error]]
+
+    page_1_record_update_queries_parameters: Iterator[Tuple[str, Tuple[Union[None, str], Union[None, Binary]]]] = \
+        map(lambda tup: (craft_sqlite_project_names_update(project_name=tup[0], page=tup[1], api_has_been_queried=tup[2], api_query_succeeded=tup[3]),
+                         (tup[-1].error, Binary(tup[-1].content) if tup[-1].content is not None else None)),
+            page_1_records)
+
+    page_ge_2_record_insert_queries_parameters: Iterator[Tuple[str, Tuple[str, int, int, Union[None, str], Union[None, Binary]]]] = \
+        map(lambda tup: (craft_sqlite_project_names_insert(), (tup[0], tup[1], tup[2], tup[3], tup[-1].error,
+                         tup[-1].error, Binary(tup[-1].content) if tup[-1].content is not None else None)),
+            page_ge_2_records)
+
+    queries_and_parameters: Iterator[Tuple] = it.chain.from_iterable(
+        (page_1_record_update_queries_parameters,
+         page_ge_2_record_insert_queries_parameters)
+    )
 
     with connect('../libraries_io.db') as conn:
-        sqlite_args = map(lambda fields: (conn, fields), sqlite_fields)
-        return_codes = it.starmap(execute_sqlite_query, sqlite_args)
-        successfully_updated = sum(map(lambda rc: rc == 0, return_codes))
+        sqlite_args: Iterator[Tuple] = \
+            map(lambda tup: (conn, *tup), queries_and_parameters)
+        return_codes: Iterator[Union[int, None]] = \
+            it.starmap(execute_sqlite_query, sqlite_args)
+        successfully_queried: int = sum(map(lambda rc: rc == 0, return_codes))
 
-    return successfully_updated
+    logger.info(f"{successfully_queried} records successfully inserted/updated")
 
 
 if __name__ == "__main__":
