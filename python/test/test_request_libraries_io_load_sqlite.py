@@ -257,11 +257,6 @@ def response_w_3_pages():
                  status=200)
         yield rsps
 
-@pt.fixture
-def mocked_responses():
-    with responses.RequestsMock(assert_all_requests_are_fired=False) as rsps:
-        yield rsps
-
 
 @pt.fixture(scope="function")
 def session():
@@ -271,12 +266,39 @@ def session():
 
 @responses.activate
 @given(valid_project_name())
-def test_request_with_session__single_page(mocked_responses, pn):
+def test_request_with_session__single_page(pn):
     url = '?'.join((URL % pn, 'page=1&per_page=100'))
-    mocked_responses.add(responses.GET, url, status=200)
-    resp = get(URL % pn, params={'page': 1, 'per_page': 100})
-    assert resp.status == 200
-    # pr = session.prepare_request(r)
-    # resp = session.send(pr)
-    # r = Request('GET', '?'.join((URL % 'foobar', 'page=1&per_page=100')))
-    # rws = request_with_session(session, pn, pr)
+    with responses.RequestsMock(assert_all_requests_are_fired=False) as rsps:
+        rsps.add(responses.GET, url, status=200, json=[])
+        resp = get(URL % pn, params={'page': 1, 'per_page': 100})
+        assert resp.status_code == 200
+        assert resp.links.get('next', None) is None
+        assert resp.json() == []
+
+
+@responses.activate
+@given(valid_project_name())
+def test_request_with_session__multiple_pages_assert_next_page(pn):
+    url = '?'.join((URL % pn, 'page=1&per_page=100'))
+    with responses.RequestsMock(assert_all_requests_are_fired=False) as rsps:
+        rsps.add(responses.GET,
+                 url,
+                 headers={'Link': f'<https://libraries.io/api/Pypi/{pn}/contributors?page=3&per_page=100>; rel="last", <https://libraries.io/api/Pypi/{pn}/contributors?page=2&per_page=100>; rel="next"'},
+                 status=200)
+        resp = get(url)
+        next_page = resp.links.get('next', None)
+        assert next_page['url'] == f'https://libraries.io/api/Pypi/{pn}/contributors?page=2&per_page=100'
+
+
+@responses.activate
+@given(valid_project_name())
+def test_request_with_session__multiple_pages_assert_last_page(pn):
+    url = '?'.join((URL % pn, 'page=1&per_page=100'))
+    with responses.RequestsMock(assert_all_requests_are_fired=False) as rsps:
+        rsps.add(responses.GET,
+                 url,
+                 headers={'Link': f'<https://libraries.io/api/Pypi/{pn}/contributors?page=3&per_page=100>; rel="last", <https://libraries.io/api/Pypi/{pn}/contributors?page=2&per_page=100>; rel="next"'},
+                 status=200)
+        resp = get(url)
+        last_page = resp.links.get('last', None)
+        assert last_page['url'] == f'https://libraries.io/api/Pypi/{pn}/contributors?page=3&per_page=100'

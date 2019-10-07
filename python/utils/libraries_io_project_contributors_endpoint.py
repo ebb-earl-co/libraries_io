@@ -55,7 +55,7 @@ def build_get_request(url, get_api_key=True, per_page=100, page=None):
 
         return api_key
 
-    params = {k:v for k, v in (("per_page", per_page), ("page", page))
+    params = {k: v for k, v in (("per_page", per_page), ("page", page))
               if v is not None}
     if get_api_key:
         params["api_key"] = get_api_key_()

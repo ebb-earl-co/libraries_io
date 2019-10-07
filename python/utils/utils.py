@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from functools import reduce
 import itertools as it
 import logging
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -60,7 +61,7 @@ def craft_sqlite_project_names_insert():
                     api_query_succeeded,
                     execution_error,
                     contributors,
-                    ts) VALUES (?, ?, ?, ?, ?, ?, ?);"""
+                    ts) VALUES (?, ?, ?, ?, ?, ?, current_timestamp);"""
     return insert_query
 
 
@@ -153,3 +154,7 @@ def chunk(i, n):
     """
     to_be_iterated = iter(i)
     return iter(lambda: tuple(it.islice(to_be_iterated, n)), ())
+
+
+def compose(*functions):
+    return reduce(lambda f, g: lambda x: f(g(x)), functions, lambda x: x)
