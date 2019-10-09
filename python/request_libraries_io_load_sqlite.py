@@ -60,7 +60,7 @@ def main():
         where api_has_been_queried is null group by project_name
         LIMIT {args.batch_size}"""
 
-    with connect(args.DB, timeout=10) as conn:
+    with connect(args.DB) as conn:
         conn.row_factory = Row
         cur = conn.cursor()
         logger.info(f"Executing\n{query}\nto {args.DB}")
@@ -116,8 +116,9 @@ def main():
     )
 
     with connect(args.DB) as conn:
-        sqlite_args: Iterator[Tuple] = map(lambda tup: (conn, *tup), queries_and_parameters)
-        return_codes: Iterator[Union[int, None]] = it.starmap(execute_sqlite_query, sqlite_args)
+        execute_ = partial(execute_sqlite_query, conn)
+        return_codes: Iterator[Union[int, None]] = \
+            it.starmap(execute_, queries_and_parameters)
         successfully_queried: int = sum(map(lambda rc: rc == 0, return_codes))
 
     logger.info(f"{successfully_queried} records successfully inserted/updated")

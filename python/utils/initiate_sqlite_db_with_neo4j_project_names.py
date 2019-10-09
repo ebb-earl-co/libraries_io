@@ -37,9 +37,8 @@ def return_parser():
     parser = ArgumentParser(
         description='Query local Neo4j database and insert into local sqlite',
         formatter_class=RawTextHelpFormatter,
-        epilog='N.b. to avoid being prompted for Graph DB password and '
-        'Libraries.io API key, set the ENV variables `GRAPHDBPASS` and `APIKEY`'
-        ', respectively'
+        epilog='N.b. to avoid being prompted for Graph DB password, '
+        'set the ENV variable `GRAPHDBPASS`'
     )
     parser.add_argument('DB', type=str,
                         help='The sqlite DB containing project_names that have '
