@@ -419,7 +419,7 @@ and the resulting top 10 in terms of degree centrality score are:
 |Jon Dufresne|jdufresne|3156925|7|154|219th|
 |Marc Abramowitz|msabramo|2900178|6|501|26th|
 |Felix Yan|felixonmars|2381533|5|210|154th|
-|Hugo|hugovk|2211470|4|296|93th|
+|Hugo|hugovk|2211470|4|296|93rd|
 |Donald Stufft|dstufft|1941603|5|116|300th|
 |Adam Johnson|adamchainz|1868055|4|496|28th|
 |Jason R. Coombs|jaraco|1834306|3|194|160th|
@@ -446,7 +446,7 @@ As this table hints, there is a high correlation between the degree
 centrality score and the number of top-10 `Project`s contributed
 to, but not such a meaningful correlation between number of
 _total_ projects
-(query [here](https://github.com/ebb-earl-co/libraries_io/blob/master/cypher/most_contributions_total.cypher)) contributed to.
+(query [here](https://github.com/ebb-earl-co/libraries_io/blob/master/cypher/most_contributions_total.cypher) and rank query [here](https://github.com/ebb-earl-co/libraries_io/blob/master/cypher/total_contributions_ranks.cypher)) contributed to.
 Indeed, using the [`algo.similarity.pearson` function](https://neo4j.com/docs/graph-algorithms/current/experimental-algorithms/pearson/#algorithms-similarity-pearson-function-sample):
 ```cypher
 MATCH (:Language {name: 'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Platform {name: 'Pypi'})
