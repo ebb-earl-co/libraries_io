@@ -25,23 +25,23 @@ top 10:
 
 |Contributor|GitHub login|Degree Centrality Score|
 |---|---|---|
-|Jon Dufresne|jdufresne|908745|
-|Marc Abramowitz|msabramo|504221|
-|Donald Stufft|dstufft|383271|
-|Hugo|hugovk|363857|
-|Jason R. Coombs|jaraco|340564|
-|Anthony Sottile|asottile|339792|
-|Felix Yan|felixonmars|332378|
-|Ian Stapleton Cordasco|sigmavirus24|326373|
-|Kenneth Reitz|kennethreitz|288946|
-|Cory Benfield|Lukasa|272798|
+|Jon Dufresne|jdufresne|3156925|
+|Marc Abramowitz|msabramo|2900178|
+|Felix Yan|felixonmars|2381533|
+|Hugo|hugovk|2211470|
+|Donald Stufft|dstufft|1941603|
+|Adam Johnson|adamchainz|1868055|
+|Jason R. Coombs|jaraco|1834306|
+|Ville Skyttä|scop|1663389|
+|Jakub Wilk|jwilk|1617620|
+|Benjamin Peterson|benjaminp|1599624|
 
-What no doubt contributed to @jdufresne's stratospheric score is
-that he contributes to 6 of the 10 most-influential projects from
-a degree centrality perspective, and 5 of the 10 most-depended-on
-projects (i.e. the number of incoming `DEPENDS_ON` relationships.
-The hypothesized most-influential `Contributor`, Kenneth Reitz,
-contributes to only 2 and 1 of these projects, respectively.
+What no doubt contributed to @jdufresne's top score is
+that he contributes to 7 of the 10 most-influential projects from
+a degree centrality perspective. The hypothesized most-influential
+`Contributor`, Kenneth Reitz, contributes to only 2 of these projects,
+and ends up being nowhere near the top 10 with the 47th-highest degree
+centrality score.
 
 For more context around this finding and how it was reached, read on.
 ## The Approach
@@ -416,28 +416,30 @@ and the resulting top 10 in terms of degree centrality score are:
 
 |Contributor|GitHub login|Degree Centrality Score|# Top-10 Contributions|# Total Contributions|Total Contributions Rank|
 |---|---|---|---|---|---|
-|Jon Dufresne|jdufresne|908745|6|131|136th|
-|Marc Abramowitz|msabramo|504221|4|421|15th|
-|Donald Stufft|dstufft|383271|3|94|219th|
-|Hugo|hugovk|363857|2|216|96th|
-|Jason R. Coombs|jaraco|340564|2|169|110th|
-|Anthony Sottile|asottile|339792|2|130|137th|
-|Felix Yan|felixonmars|332378|2|111|168th|
-|Ian Stapleton Cordasco|sigmavirus24|326373|2|60|350th|
-|Kenneth Reitz|kennethreitz|288946|2|101|205th|
-|Cory Benfield|Lukasa|272798|1|35|786th|
+|Jon Dufresne|jdufresne|3156925|7|154|219th|
+|Marc Abramowitz|msabramo|2900178|6|501|26th|
+|Felix Yan|felixonmars|2381533|5|210|154th|
+|Hugo|hugovk|2211470|4|296|93th|
+|Donald Stufft|dstufft|1941603|5|116|300th|
+|Adam Johnson|adamchainz|1868055|4|496|28th|
+|Jason R. Coombs|jaraco|1834306|3|194|160th|
+|Ville Skyttä|scop|1663389|3|135|252nd|
+|Jakub Wilk|jwilk|1617620|4|154|221st|
+|Benjamin Peterson|benjaminp|1599624|3|38|1541st|
+|...|...|...|...|...|...|
+|Kenneth Reitz|kennethreitz|803087|2|119|290th|
 
 `Contributor` Jon Dufresne has the highest score which is
 nearly double that of the second-most-influential `Contributor`!
 Kenneth Reitz, the author of the most-influential `Project`
-node comes in 9th place based on this query. What no doubt
-contributed to @jdufresne's stratospheric score is
-that he contributes to 6 of the 10 most-influential projects from
+node comes in 47th place based on this query. What no doubt
+contributed to @jdufresne's top score is
+that he contributes to 7 of the 10 most-influential projects from
 a degree centrality perspective. The hypothesized most-influential
 `Contributor`, Kenneth Reitz, contributes to only 2 of these projects.
 
-It turns out that 6 is the most top-10 `Project`s contributed to out
-of all `Contributor`s, and only 243 `Contributor`s
+It turns out that 7 is the most top-10 `Project`s contributed to out
+of all `Contributor`s, and only 1603 `Contributor`s
 `CONTRIBUTES_TO` a top-10 `Project` at all (query
 [here](https://github.com/ebb-earl-co/libraries_io/blob/master/cypher/most_contributions_to_top_10_projects.cypher)).
 As this table hints, there is a high correlation between the degree
@@ -456,7 +458,7 @@ WITH collect(c.degree_centrality) as dc, collect(num_top_10_contributions) as tc
 RETURN algo.similarity.pearson(dc, tc) AS degree_centrality_top_10_contributions_correlation_estimate
 ;
 ```
-yields an estimate of 0.6158, whereas
+yields an estimate of 0.5997, whereas
 ```cypher
 MATCH (:Language {name: 'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Platform {name: 'Pypi'})
 WITH p
@@ -466,7 +468,7 @@ WITH collect(c.degree_centrality) as dc, collect(num_total_contributions) as tc
 RETURN algo.similarity.pearson(dc, tc) AS degree_centrality_total_contributions_correlation_estimate
 ;
 ```
-is only 0.1755.
+is only 0.2243.
 
 All this goes to show that, in a network, the centrality of a
 node is determined by contributing to the _right_ nodes,
