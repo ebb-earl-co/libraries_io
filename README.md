@@ -430,8 +430,8 @@ and the resulting top 10 in terms of degree centrality score are:
 |Kenneth Reitz|kennethreitz|803087|2|119|290th|
 
 `Contributor` Jon Dufresne has the highest score which is
-nearly double that of the second-most-influential `Contributor`!
-Kenneth Reitz, the author of the most-influential `Project`
+the only score that crests 3 million!  Kenneth Reitz, the
+author of the most-influential `Project`
 node comes in 47th place based on this query. What no doubt
 contributed to @jdufresne's top score is
 that he contributes to 7 of the 10 most-influential projects from
