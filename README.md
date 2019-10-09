@@ -1,10 +1,10 @@
 # Finding the Most Influential PyPi Contributor using Neo4j and Libraries.io Open Data
-Upon coming across the excellent [`pipenv`](https://pipenv.readthedocs.io/en/latest/) 
+Upon coming across the excellent [`pipenv`](https://pipenv.readthedocs.io/en/latest/)
 package, written by Kenneth Reitz (he of [`requests`](https://requests.readthedocs.io/en/latest/)
-fame), I wondered whether the adoption of this package by the Python Packaging 
-Authority as the go-to 
+fame), I wondered whether the adoption of this package by the Python Packaging
+Authority as the go-to
 [dependency manager for Python](https://packaging.python.org/guides/tool-recommendations/#application-dependency-management)
-makes Kenneth Reitz the most influential Python contributor on PyPi. After all, 
+makes Kenneth Reitz the most influential Python contributor on PyPi. After all,
 his mantra when developing a package is "<_Insert programming activity here_> for __humans__".
 
 We will analyze the Python projects uploaded to the
@@ -18,9 +18,9 @@ node in the graph of Python packages, dependencies, and contributors.
 After constructing the graph and
 [analyzing the degree centrality](https://neo4j.com/docs/graph-algorithms/current/algorithms/degree-centrality/),
 despite his `requests` package being far and away the most influential Python package
-in the graph, Kenneth Reitz is only the 9th-most-influential `Contributor`.
+in the graph, Kenneth Reitz is only the 47th-most-influential `Contributor`.
 The `Contributor` with the highest degree centrality is
-[Jon Dufresne](https://github.com/jdufresne), and it's not even close; below are the
+[Jon Dufresne](https://github.com/jdufresne), with the only score above 3 million; below are the
 top 10:
 
 |Contributor|GitHub login|Degree Centrality Score|
@@ -48,19 +48,19 @@ For more context around this finding and how it was reached, read on.
 ### Libraries.io Open Data
 [PyPi](https://pypi.org/) is the repository for Python packages that developers
 know and love. Analogously to PyPi, other programming languages have their respective package
-managers, such as CRAN for `R`. As a natural exercise in abstraction, 
-[Libraries.io](https://libraries.io) is a meta-repository for 
+managers, such as CRAN for `R`. As a natural exercise in abstraction,
+[Libraries.io](https://libraries.io) is a meta-repository for
 package managers. From [their website](https://libraries.io/data):
 
-> Libraries.io gathers data from **36** package managers and **3** source code repositories. 
+> Libraries.io gathers data from **36** package managers and **3** source code repositories.
 We track over **2.7m** unique open source packages, **33m** repositories and **235m**
-interdependencies between [sic] them. This gives Libraries.io a unique understanding of 
+interdependencies between [sic] them. This gives Libraries.io a unique understanding of
 open source software. An understanding that we want to share with **you**.
 
 #### Using Open Data Snapshot to Save API Calls
 Libraries.io has an easy-to-use [API](https://libraries.io/api), but
 given that PyPi is the fourth-most-represented package manager in the Open Data
-with 200,000+ packages, the number of API calls to various endpoints to collate 
+with 200,000+ packages, the number of API calls to various endpoints to collate
 the necessary data is not appealing (also, Libraries.io rate limits to 60 requests
 per minute). Fortunately, [Jeremy Katz on Zenodo](https://zenodo.org/record/2536573)
 maintains snapshots of the Libraries.io Open Data source. The most recent
@@ -87,8 +87,8 @@ take up 64 GB on disk!
 
 ### Graph Databases, Starring Neo4j
 Because of the interconnected nature of software packages (dependencies,
-versions, contributors, etc.), finding the most influential "item" in that web 
-of data make [graph databases](https://db-engines.com/en/ranking/graph+dbms) and 
+versions, contributors, etc.), finding the most influential "item" in that web
+of data make [graph databases](https://db-engines.com/en/ranking/graph+dbms) and
 [graph theory](https://medium.freecodecamp.org/i-dont-understand-graph-theory-1c96572a1401)
 the ideal tools for this type of analysis. [Neo4j](https://neo4j.com/product/)
 is the most popular graph database according to [DB engines](https://neo4j.com/product/),
@@ -106,10 +106,10 @@ Terminology that will be useful going forward:
   - `KNOWS`, and all Neo4j relationships, are __directed__; i.e. `Jane Doe`
   knows `John Smith`, but not the converse
 
-On MacOS, the easiest way to use Neo4j is via the Neo4j Desktop app, available 
+On MacOS, the easiest way to use Neo4j is via the Neo4j Desktop app, available
 as the [`neo4j` cask on Homebrew](https://github.com/Homebrew/homebrew-cask/blob/master/Casks/neo4j.rb).
 Neo4j Desktop is a great IDE for Neo4j, allowing simple installation of different
-versions of Neo4j as well as plugins that are optional 
+versions of Neo4j as well as plugins that are optional
 (e.g. [`APOC`](https://neo4j.com/docs/labs/apoc/current/)) but
 are really the best way to interact with the graph database. Moreover, the
 screenshot above is taken from the Neo4j Browser, a nice interactive
@@ -125,7 +125,7 @@ corresponding to Neo4j version 3.5.7.
 is the most common way to populate a Neo4j graph, and is how we will
 proceed given that the Open Data snapshot un`tar`s into CSV files. However,
 first a data model is necessary— what the entities that will be
-represented as labeled nodes with properties and the relationships 
+represented as labeled nodes with properties and the relationships
 among them are going to be. Moreover, some settings of Neo4j
 will have to be customized for proper and timely import from CSV.
 #### Data Model
@@ -137,8 +137,8 @@ In the case of the Libraries.io data, the following is the data model
 ![data model](images/arrows.svg)
 
 So, a `Platform` `HOSTS` a `Project`, which `IS_WRITTEN_IN` a `Language`,
-and `HAS_VERSION` `Version`. Moreover, a `Project` `DEPENDS_ON` other 
-`Project`s, and `Contributor`s `CONTRIBUTE_TO` `Project`s. With respect to 
+and `HAS_VERSION` `Version`. Moreover, a `Project` `DEPENDS_ON` other
+`Project`s, and `Contributor`s `CONTRIBUTE_TO` `Project`s. With respect to
 `Version`s, the diagram communicates a limitation of the Libraries.io
 Open Data: that `Project` nodes are linked in the dependencies CSV to other
 `Project` nodes, despite the fact that different versions of a project
@@ -179,7 +179,7 @@ it is possible to use the aforementioned APOC utilities for Neo4j to
 [load data from web APIs](https://neo4j.com/docs/labs/apoc/current/import/web-apis/),
 but I found it to be unwieldy and difficult to monitor. So, I used
 Python's `requests` and `SQLite` packages to send requests to the
-endpoint and store the responses in a long-running Bash process 
+endpoint and store the responses in a long-running Bash process
 (code for this [here](https://github.com/ebb-earl-co/libraries_io/blob/master/python/request_libraries_io_load_sqlite.py)).
 #### Database Constraints
 Analogously to the unique constraint in a relational database, Neo4j has a
@@ -187,7 +187,7 @@ Analogously to the unique constraint in a relational database, Neo4j has a
 which is very useful in constraining the number of nodes created. Basically,
 it isn't useful, and hurts performance, to have two different nodes representing the
 platform Pypi (or the language Python, or the project `pipenv`, ...) because
-it is a unique entity. Moreover, uniqueness constraints enable 
+it is a unique entity. Moreover, uniqueness constraints enable
 [more performant queries](https://neo4j.com/docs/cypher-manual/3.5/clauses/merge/#query-merge-using-unique-constraints).
 The following
 [Cypher commands](https://github.com/ebb-earl-co/libraries_io/blob/master/cypher/schema.cypher)
@@ -201,7 +201,7 @@ CREATE CONSTRAINT ON (version:Version) ASSERT version.ID IS UNIQUE;
 CREATE CONSTRAINT ON (language:Language) ASSERT language.name IS UNIQUE;
 CREATE CONSTRAINT ON (contributor:Contributor) ASSERT contributor.uuid IS UNIQUE;
 ```
-All of the `ID` properties come from the first column of the CSVs and are 
+All of the `ID` properties come from the first column of the CSVs and are
 ostensibly primary key values. The `name` property of `Project` nodes is
 also constrained to be unique so that queries seeking to match nodes on
 the property name— the way that we think of them— are performant as well.
@@ -212,7 +212,7 @@ can be done with the default
 [`LOAD CSV` command](https://neo4j.com/docs/cypher-manual/current/clauses/load-csv/),
 but in the APOC plugin there is an improved version,
 [`apoc.load.csv`](https://neo4j.com/docs/labs/apoc/current/import/load-csv/#load-csv),
-which iterates over the CSV rows as map objects instead of arrays; 
+which iterates over the CSV rows as map objects instead of arrays;
 when coupled with
 [periodic execution](https://neo4j.com/docs/labs/apoc/current/import/load-csv/#_transaction_batching)
 (a.k.a. batching), loading CSVs can be done in parallel, as well.
@@ -242,10 +242,10 @@ Using the property specified in the query, MERGE either MATCHes the node/relatio
 with the property, and, if it doesn't exist, duly CREATEs the node/relationship.
 If the property in the query has a uniqueness constraint, Neo4j can thus iterate
 over possible duplicates of the "same" node/relationship, only creating it once,
-and "attaching" nodes to the uniquely-specified node on the go. 
+and "attaching" nodes to the uniquely-specified node on the go.
 
-This is a double-edged sword, though, in the situation of creating relationships 
-between unique nodes; if the participating nodes are not specified exactly, to 
+This is a double-edged sword, though, in the situation of creating relationships
+between unique nodes; if the participating nodes are not specified exactly, to
 MERGE a relationship between them will create __new__ node(s) that are duplicates.
 This is undesirable from an ontological perspective, as well as a database
 efficiency perspective. So, all this to say that, to create unique
@@ -268,7 +268,7 @@ parsimony, we will load data in the following order:
 #### Loading `Project`s
 First up is the `Project` nodes. The source CSV for this type of node is
 [pypi\_projects.csv](https://github.com/ebb-earl-co/libraries_io/blob/master/data/pypi_subsetting.md#projects)
-and the queries are in 
+and the queries are in
 [this file](https://github.com/ebb-earl-co/libraries_io/blob/master/cypher/projects_apoc.cypher).
 Neo4j loads the CSVs data following the instructions of the file with the
 [`apoc.cypher.runFile`](https://neo4j.com/docs/labs/apoc/current/cypher-execution/) command; i.e.
@@ -294,7 +294,7 @@ the following nodes and relationships:
 ![post-versions\_apoc](images/versions_apoc-cypher_result.png)
 #### Loading Dependencies among `Project`s and `Version`s
 Now that there are `Project` nodes and `Version` nodes, it's time to
-link their dependencies. The source CSV for these data is 
+link their dependencies. The source CSV for these data is
 [pypi\_dependencies.csv](https://github.com/ebb-earl-co/libraries_io/blob/master/data/pypi_subsetting.md#dependencies)
 and this query is in
 [this file](https://github.com/ebb-earl-co/libraries_io/blob/master/cypher/dependencies_apoc.cypher).
@@ -310,7 +310,7 @@ the `DEPENDS_ON` relationship:
 #### Loading `Contributor`s
 Because the data corresponding to Python `Project` `Contributor`s was
 retrieved from the API, it is not run with Cypher from a file, but
-in a Python script, particularly 
+in a Python script, particularly
 [this section](https://github.com/ebb-earl-co/libraries_io/blob/master/python/merge_contributors.py#L95-L127).
 After executing this process, the graph is now in its final form:
 
@@ -360,8 +360,8 @@ RETURN algo.asNode(nodeId).name as project, score as degree_centrality_score
 ORDER BY degree_centrality_score DESC
 ;
 ```
-It is **crucially** important to alias as `source` the `Project` 
-node MATCHed in the second query as the _end node_ of the 
+It is **crucially** important to alias as `source` the `Project`
+node MATCHed in the second query as the _end node_ of the
 `DEPENDS_ON` relationship, and the _start node_ of the
 relationship as `target`. This is not officially documented,
 but the example in the documentation has it as such, and I ran
