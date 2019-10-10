@@ -27,7 +27,7 @@ def get_graph_password(env_variable_name: str = GRAPHDBPASS) -> str:
     return pw
 
 
-def execute_cypher_match_statement(g: Graph, statement: str, **kwargs) -> Cursor:
+def execute_cypher_statement(g: Graph, statement: str, **kwargs) -> Cursor:
     """ Return the iterator of query results from `py2neo.Graph.run`
     Args:
         g (py2neo.Graph): the graph object representing DB to interact with
@@ -61,7 +61,7 @@ def create_contributor_node(d: Dict, label: str = "Contributor") -> Node:
 
 def main(argv=None):
     if argv is None:
-        argv: list = sys.argv
+        argv: List = sys.argv
 
     DB, merged_contributors, batch_size = argv[1:]
     g: Graph = Graph(password=get_graph_password())
@@ -80,7 +80,7 @@ def main(argv=None):
     # from SQLite
     print("Querying Neo4j for nodes representing Python projects on Pypi\n",
           file=sys.stderr)
-    projects_cursor: Cursor = execute_cypher_match_statement(
+    projects_cursor: Cursor = execute_cypher_statement(
         g, python_projects_on_pypi_query % int(merged_contributors)
     )
 
@@ -125,10 +125,11 @@ def main(argv=None):
                 projects[pnode] += 1
                 print(f"MERGEing contributors to Neo4j for project {pnode['name']}",
                       file=sys.stderr)
-                print(f"\tMERGEing contributor {projects[pnode]}: {cnode.get('name')}")
+                print(f"\tMERGEing contributor {projects[pnode]}: {cnode.get('name')}",
+                      file=sys.stderr)
                 tx.merge(cnode, "Contributor", "uuid")
                 print("\t\tMERGEing relationship to contributor "
-                      f"{projects[pnode]}: {cnode.get('name')}")
+                      f"{projects[pnode]}: {cnode.get('name')}", file=sys.stderr)
                 rel = Relationship(cnode, "CONTRIBUTES_TO", pnode)
                 tx.merge(rel)
             else:
@@ -137,7 +138,7 @@ def main(argv=None):
         for project, count in projects.items():
             tx = g.begin(autocommit=False)
             print("Upating 'merged_contributors' property for Project node "
-                  f"{project} with value {count}")
+                  f"{project} with value {count}", file=sys.stderr)
             project.update(merged_contributors=count)
             tx.push(project)
             tx.commit()
