@@ -9,7 +9,7 @@ will be made at a time, with `time.sleep` called between batches.
 
 from functools import partial
 import itertools as it
-from typing import Any, Callable, Iterable, Iterator, Generator, List, Tuple, Union
+from typing import Callable, Iterator, Generator, List, Tuple, Union
 
 from backoff import on_exception, expo
 from ratelimit import limits, RateLimitException
@@ -18,9 +18,10 @@ from requests import PreparedRequest, Request, Response, Session
 from logger import return_logger
 from utils.libraries_io_project_contributors_endpoint import \
     build_get_request, content_and_error, parse_request_response_content, URL
-from utils.utils import (chunk, compose, connect, craft_sqlite_project_names_update,
-                         craft_sqlite_project_names_insert, partition,
-                         return_parser, execute_sqlite_query, Binary, Row)
+from utils.utils import \
+        (connect, craft_sqlite_project_names_update,
+         craft_sqlite_project_names_insert, partition, return_parser,
+         execute_sqlite_query, Binary, Row)
 
 
 @on_exception(expo, RateLimitException, max_tries=10)
@@ -40,9 +41,10 @@ def request_with_session(session, project_name, prepared_request):
     """
     response = session.send(prepared_request)
     page = \
-        int(next(filter(lambda param: param if param.startswith('page') else None,
-                        response.request.url.split('&')))[-1])
-    # logger.info(f"Sent request for project '{project_name}', page {page}")
+        int(next(filter(
+            lambda param: param if param.startswith('page') else None,
+            response.request.url.split('&')))[-1])
+    logger.info(f"Sent request for project '{project_name}', page {page}")
     yield (project_name, page, response)
     next_page = response.links.get('next', None)
     if next_page is not None:
@@ -67,7 +69,7 @@ def main():
         project_names: List[str] = [row['name'] for row in cur.execute(query)]
 
     with Session() as s:
-        request_ = partial(request_with_session, s)
+        request_: Callable = partial(request_with_session, s)
         project_names_and_requests: Generator[Tuple[str, Request]] = \
             ((project_name, build_get_request(URL % project_name, True, 100, 1))
              for project_name in project_names)
