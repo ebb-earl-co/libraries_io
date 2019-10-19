@@ -18,11 +18,11 @@
     "default": {
         "backoff": {
             "hashes": [
-                "sha256:c7187f15339e775aec926dc6e5e42f8a3ad7d3c2b9a6ecae7b535000f70cd838",
-                "sha256:d340bb6f36d025c04214b8925112d8456970e5f28dda46e4f1133bf5c622cb0a"
+                "sha256:3f1ed23d36c65ec16c143e432b12c19aaf12ed791317b91ab50dd14ac6255a3c",
+                "sha256:53531e45432b18795f808c28dd9c5a4b32fe44aa713780ea892f07c3e6b36c11"
             ],
             "index": "pypi",
-            "version": "==1.8.0"
+            "version": "==1.8.1"
         },
         "certifi": {
             "hashes": [
@@ -154,10 +154,10 @@
         },
         "attrs": {
             "hashes": [
-                "sha256:ec20e7a4825331c1b5ebf261d111e16fa9612c1f7a5e1f884f12bd53a664dfd2",
-                "sha256:f913492e1663d3c36f502e5e9ba6cd13cf19d7fab50aa13239e420fef95e1396"
+                "sha256:08a96c641c3a74e44eb59afb61a24f2cb9f4d7188748e76ba4bb5edfa3cb7d1c",
+                "sha256:f7b7ce16570fe9965acd6d30101a28f62fb4a7f9e926b3bbc9b61f8b04247e72"
             ],
-            "version": "==19.2.0"
+            "version": "==19.3.0"
         },
         "certifi": {
             "hashes": [
@@ -175,11 +175,11 @@
         },
         "hypothesis": {
             "hashes": [
-                "sha256:6186f742907e7c0173f5476aebe05c4b0d106d9f8d8c8ce68322f1d14f73ea03",
-                "sha256:8b399f52ee53bd154f0dbead4e7be60442ce7ff625b1d2d17eeb9cb7194c3989"
+                "sha256:6847df3ffb4aa52798621dd007e6b61dbcf2d76c30ba37dc2699720e2c734b7a",
+                "sha256:acd47600deb55e9c2c98de6deef23384160ed0fdaafb6753146e556c077d3c78"
             ],
             "index": "pypi",
-            "version": "==4.39.0"
+            "version": "==4.41.2"
         },
         "idna": {
             "hashes": [

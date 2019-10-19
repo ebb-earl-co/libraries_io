@@ -4,7 +4,7 @@
 """ This is the main runner script for querying the Libraries.io
 API, project contributors endpoint and loading the response (and error, if any)
 to sqlite. As the API rate limits to 60 per minute, 60 or fewer API calls
-will be made at a time, with `time.sleep` called between batches.
+will be made in that time period, managed by the `ratelimit` module.
 """
 
 from functools import partial
