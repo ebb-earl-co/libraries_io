@@ -200,13 +200,18 @@ CREATE CONSTRAINT ON (project:Project) ASSERT project.ID IS UNIQUE;
 CREATE CONSTRAINT ON (version:Version) ASSERT version.ID IS UNIQUE;
 CREATE CONSTRAINT ON (language:Language) ASSERT language.name IS UNIQUE;
 CREATE CONSTRAINT ON (contributor:Contributor) ASSERT contributor.uuid IS UNIQUE;
+CREATE INDEX ON :Contributor(name);
 ```
 All of the `ID` properties come from the first column of the CSVs and are
 ostensibly primary key values. The `name` property of `Project` nodes is
 also constrained to be unique so that queries seeking to match nodes on
 the property name— the way that we think of them— are performant as well.
+Likewise, query for `Contributor`s is most naturally done via their names,
+but as first name, last name pairs are not necessarily unique, a Neo4j
+[index](https://neo4j.com/docs/cypher-manual/current/schema/index/#schema-index-create-a-single-property-index)
+will speed up queries without necessitating uniqueness of the property.
 ## Populating the Graph
-With the constraints, plugins, and configuration of Neo4j in place,
+With the constraints, indexes, plugins, and configuration of Neo4j in place,
 the Libaries.io Open Data dataset can be loaded.  Loading CSVs to Neo4j
 can be done with the default
 [`LOAD CSV` command](https://neo4j.com/docs/cypher-manual/current/clauses/load-csv/),
@@ -350,15 +355,11 @@ in `Python` that are hosted on `Pypi`, the syntax
 is:
 
 ```cypher
-call algo.degree.stream(
+call algo.degree(
     "MATCH (:Language {name:'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Platform {name:'Pypi'}) return id(p) as id",
     "MATCH (p1:Project)-[:HAS_VERSION]->(:Version)-[:DEPENDS_ON]->(p2:Project) return id(p2) as source, id(p1) as target",
-    {graph: 'cypher', write: False}
-)
-YIELD nodeId, score
-RETURN algo.asNode(nodeId).name as project, score as degree_centrality_score
-ORDER BY degree_centrality_score DESC
-;
+    {graph: 'cypher', write: true, writeProperty: 'pypi_degree_centrality'}
+);
 ```
 It is **crucially** important to alias as `source` the `Project`
 node MATCHed in the second query as the _end node_ of the
@@ -366,7 +367,20 @@ node MATCHed in the second query as the _end node_ of the
 relationship as `target`. This is not officially documented,
 but the example in the documentation has it as such, and I ran
 into Java errors if not aliased exactly that way. This query
-returns the following (top 10 displayed) results:
+sets the `pypi_degree_centrality` property on each `Project`
+node, and this query
+```cypher
+MATCH (:Language {name: 'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Platform {name: 'Pypi'})
+WITH p ORDER BY p.pypi_degree_centrality DESC
+WITH collect(p) as projects
+FOREACH (project in projects
+        | SET project.pypi_degree_centrality_rank = apoc.coll.indexOf(projects, project)+1
+)
+;
+```
+sets a rank property on each `Project` corresponding to its degree centrality
+score. Thus, it is trivial to return the top 10 projects in terms of
+`pypi_degree_centrality_rank`:
 
 |Project|Degree Centrality Score|
 |---|---|
@@ -402,30 +416,28 @@ their contributions to `Project`s. The query
 ([found here](https://github.com/ebb-earl-co/libraries_io/blob/master/cypher/contributor_degree_centrality.cypher))
 is:
 ```cypher
-call algo.degree.stream(
+call algo.degree(
     "MATCH (:Platform {name:'Pypi'})-[:HOSTS]->(p:Project) with p MATCH (:Language {name:'Python'})<-[:IS_WRITTEN_IN]-(p)<-[:CONTRIBUTES_TO]-(c:Contributor) return id(c) as id",
     "MATCH (c1:Contributor)-[:CONTRIBUTES_TO]->(:Project)-[:HAS_VERSION]->(:Version)-[:DEPENDS_ON]->(:Project)<-[:CONTRIBUTES_TO]-(c2:Contributor) return id(c2) as source, id(c1) as target",
-    {graph: 'cypher', write: False}
-)
-YIELD nodeId, score
-RETURN algo.asNode(nodeId).name as contributor, algo.asNode(nodeId).login as github_login, score as degree_centrality_score
-ORDER BY degree_centrality_score DESC
-;
+    {graph: 'cypher', write: true, writeProperty: 'pypi_degree_centrality'}
+);
 ```
+(the file linked to has a subsequent query to create a property that is the
+rank of every contributor in terms of `pypi_degree_centrality`)
 and the resulting top 10 in terms of degree centrality score are:
 
 |Contributor|GitHub login|Degree Centrality Score|# Top-10 Contributions|# Total Contributions|Total Contributions Rank|
 |---|---|---|---|---|---|
-|Jon Dufresne|jdufresne|3156925|7|154|219th|
-|Marc Abramowitz|msabramo|2900178|6|501|26th|
-|Felix Yan|felixonmars|2381533|5|210|154th|
-|Hugo|hugovk|2211470|4|296|93rd|
-|Donald Stufft|dstufft|1941603|5|116|300th|
-|Adam Johnson|adamchainz|1868055|4|496|28th|
-|Jason R. Coombs|jaraco|1834306|3|194|160th|
-|Ville Skyttä|scop|1663389|3|135|252nd|
-|Jakub Wilk|jwilk|1617620|4|154|221st|
-|Benjamin Peterson|benjaminp|1599624|3|38|1541st|
+|Jon Dufresne|jdufresne|3154895|7|154|219th|
+|Marc Abramowitz|msabramo|2898454|6|501|26th|
+|Felix Yan|felixonmars|2379577|5|210|154th|
+|Hugo|hugovk|2209779|4|296|93rd|
+|Donald Stufft|dstufft|1940369|5|116|300th|
+|Adam Johnson|adamchainz|1867240|4|496|28th|
+|Jason R. Coombs|jaraco|1833095|3|194|160th|
+|Ville Skyttä|scop|1661774|3|135|252nd|
+|Jakub Wilk|jwilk|1617028|4|154|221st|
+|Benjamin Peterson|benjaminp|1598444|3|38|1541st|
 |...|...|...|...|...|...|
 |Kenneth Reitz|kennethreitz|803087|2|119|290th|
 
@@ -450,25 +462,23 @@ _total_ projects
 Indeed, using the [`algo.similarity.pearson` function](https://neo4j.com/docs/graph-algorithms/current/experimental-algorithms/pearson/#algorithms-similarity-pearson-function-sample):
 ```cypher
 MATCH (:Language {name: 'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Platform {name: 'Pypi'})
-WITH p
 MATCH (p)<-[ct:CONTRIBUTES_TO]-(c:Contributor)
-WHERE p.name in ["requests","six","python-dateutil","setuptools","PyYAML","click","lxml","futures","boto3","Flask"]
+WHERE p.pypi_degree_centrality_rank <= 10
 WITH c, count(ct) as num_top_10_contributions
-WITH collect(c.degree_centrality) as dc, collect(num_top_10_contributions) as tc
+WITH collect(c.pypi_degree_centrality) as dc, collect(num_top_10_contributions) as tc
 RETURN algo.similarity.pearson(dc, tc) AS degree_centrality_top_10_contributions_correlation_estimate
 ;
 ```
-yields an estimate of 0.5997, whereas
+yields an estimate of 0.5996, whereas
 ```cypher
 MATCH (:Language {name: 'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Platform {name: 'Pypi'})
-WITH p
 MATCH (p)<-[ct:CONTRIBUTES_TO]-(c:Contributor)
 WITH c, count(ct) as num_total_contributions
-WITH collect(c.degree_centrality) as dc, collect(num_total_contributions) as tc
+WITH collect(c.pypi_degree_centrality) as dc, collect(num_total_contributions) as tc
 RETURN algo.similarity.pearson(dc, tc) AS degree_centrality_total_contributions_correlation_estimate
 ;
 ```
-is only 0.2243.
+is only 0.2254.
 
 All this goes to show that, in a network, the centrality of a
 node is determined by contributing to the _right_ nodes,
