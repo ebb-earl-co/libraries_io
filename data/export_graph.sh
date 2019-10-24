@@ -9,4 +9,6 @@
 # present in the files produced by this command
 
 PATH_TO_OUTDIR=$PWD
-JAVA_OPTS=-Xmx4G bin/cypher-shell --format=verbose "call apoc.export.cypher.all('${PATH_TO_OUTDIR}', {format:'neo4j-shell', separateFiles:true, cypherFormat:'create', useOptimizations:{unwindBatchSize:1000,type:'UNWIND_BATCH'}}) yield time return time;"
+JAVA_OPTS=-Xmx4G bin/cypher-shell --format=verbose
+# Call the following query in cypher-shell
+# call apoc.export.cypher.query("MATCH (pl:Platform{name:'Pypi'})-[h:HOSTS]->(p:Project)-[i:IS_WRITTEN_IN]->(l:Language{name:'Python'}) with pl, h, p, i, l MATCH (c:Contributor)-[ct:CONTRIBUTES_TO]->(p) RETURN pl, h, p, i, l, c, ct;", ''${PATH_TO_OUTDIR}', {format:'neo4j-shell', separateFiles:true, cypherFormat:'create', useOptimizations:{unwindBatchSize:1000,type:'UNWIND_BATCH'}}) yield time return time;
