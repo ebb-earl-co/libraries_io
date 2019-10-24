@@ -4,9 +4,12 @@ call algo.degree(
     {graph: 'cypher', write: true, writeProperty: 'pypi_degree_centrality'}
 );
 
+CREATE INDEX ON :Project(pypi_degree_centrality)
+;
+
 MATCH (:Language {name: 'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Platform {name: 'Pypi'})
 WITH p ORDER BY p.pypi_degree_centrality DESC
-WITH collect(p) as projects
-FOREACH (project in projects
-	| SET project.pypi_degree_centrality_rank = apoc.coll.indexOf(projects, project)+1
-);
+WITH collect(distinct p) as projects
+UNWIND projects as project
+SET project.pypi_degree_centrality_rank = apoc.coll.indexOf(projects, project) + 1
+;

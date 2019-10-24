@@ -67,12 +67,13 @@ def main(argv=None):
     g: Graph = Graph(password=get_graph_password())
     python_projects_on_pypi_query: str = \
         """MATCH (:Language {name: 'Python'})
-        <-[:IS_WRITTEN_IN]-(p:Project)
+        <-[:IS_WRITTEN_IN]-(p:Project {merged_contributors: %d})
         <-[:HOSTS]-(:Platform {name: 'Pypi'})
         return p order by p.name"""
     select_contributors_query: str = \
         """select contributors from project_names
-        where page > 1 and project_name=?"""
+        where api_has_been_queried=1 and api_query_succeeded=1
+        and project_name=?"""
 
     # Phase 1: get all project_names from Neo4j the contributors of which have
     # not tried to be merged yet; this means getting the `contributors` field
@@ -80,7 +81,7 @@ def main(argv=None):
     print("Querying Neo4j for nodes representing Python projects on Pypi\n",
           file=sys.stderr)
     projects_cursor: Cursor = execute_cypher_match_statement(
-        g, python_projects_on_pypi_query
+        g, python_projects_on_pypi_query % int(merged_contributors)
     )
 
     print("Converting py2neo Cursor into iterable of dicts\n", file=sys.stderr)
@@ -148,5 +149,5 @@ def main(argv=None):
         print("\nFinished.", file=sys.stderr)
 
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()

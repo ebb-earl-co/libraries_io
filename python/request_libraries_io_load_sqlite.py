@@ -57,7 +57,7 @@ def main():
     logger = return_logger(__file__, args.log_level, args.logfile)
 
     query = f"""select project_name as name from {args.table}
-        where api_has_been_queried=0 group by project_name
+        where api_has_been_queried is null group by project_name
         LIMIT {args.batch_size}"""
 
     with connect(args.DB) as conn:

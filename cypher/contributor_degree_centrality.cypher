@@ -4,10 +4,13 @@ call algo.degree(
     {graph: 'cypher', write: true, writeProperty: 'pypi_degree_centrality'}
 );
 
+CREATE INDEX ON :Contributor(pypi_degree_centrality)
+;
+
 MATCH (:Language {name: 'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Platform {name: 'Pypi'})
 MATCH (p)<-[:CONTRIBUTES_TO]-(c:Contributor)
 WITH c ORDER BY c.pypi_degree_centrality DESC
-WITH collect(c) as contributors
-FOREACH (contributor in contributors
-	| SET contributor.pypi_degree_centrality_rank = apoc.coll.indexOf(contributors, contributor)+1
-);
+WITH collect(distinct c) as contributors
+UNWIND contributors as contributor
+SET contributor.pypi_degree_centrality_rank = apoc.coll.indexOf(contributors, contributor) + 1
+;

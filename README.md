@@ -25,16 +25,16 @@ top 10:
 
 |Contributor|GitHub login|Degree Centrality Score|
 |---|---|---|
-|Jon Dufresne|jdufresne|3156925|
-|Marc Abramowitz|msabramo|2900178|
-|Felix Yan|felixonmars|2381533|
-|Hugo|hugovk|2211470|
-|Donald Stufft|dstufft|1941603|
-|Adam Johnson|adamchainz|1868055|
-|Jason R. Coombs|jaraco|1834306|
-|Ville Skyttä|scop|1663389|
-|Jakub Wilk|jwilk|1617620|
-|Benjamin Peterson|benjaminp|1599624|
+|Jon Dufresne|jdufresne|3154895|
+|Marc Abramowitz|msabramo|2898454|
+|Felix Yan|felixonmars|2379577|
+|Hugo|hugovk|2209779|
+|Donald Stufft|dstufft|1940369|
+|Adam Johnson|adamchainz|1867240|
+|Jason R. Coombs|jaraco|1833095|
+|Ville Skyttä|scop|1661774|
+|Jakub Wilk|jwilk|1617028|
+|Benjamin Peterson|benjaminp|1598444|
 
 What no doubt contributed to @jdufresne's top score is
 that he contributes to 7 of the 10 most-influential projects from
@@ -439,7 +439,7 @@ and the resulting top 10 in terms of degree centrality score are:
 |Jakub Wilk|jwilk|1617028|4|154|221st|
 |Benjamin Peterson|benjaminp|1598444|3|38|1541st|
 |...|...|...|...|...|...|
-|Kenneth Reitz|kennethreitz|803087|2|119|290th|
+|Kenneth Reitz|kennethreitz|803087|2|119|337th|
 
 `Contributor` Jon Dufresne has the highest score which is
 the only score that crests 3 million!  Kenneth Reitz, the
@@ -473,7 +473,7 @@ yields an estimate of 0.5996, whereas
 ```cypher
 MATCH (:Language {name: 'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Platform {name: 'Pypi'})
 MATCH (p)<-[ct:CONTRIBUTES_TO]-(c:Contributor)
-WITH c, count(ct) as num_total_contributions
+WITH distinct c, count(distinct ct) as num_total_contributions
 WITH collect(c.pypi_degree_centrality) as dc, collect(num_total_contributions) as tc
 RETURN algo.similarity.pearson(dc, tc) AS degree_centrality_total_contributions_correlation_estimate
 ;
