@@ -162,8 +162,8 @@ Data dataset with contributors data will require calls to the
 is a rate limit of 60 requests per minute. If there are
 
 ```bash
-$ mlr --csv filter '$Platform == "Pypi" && $Language == "Python"' projects-1.4.0-2018-12-22.csv | wc -l
-   95160
+$ mlr --icsv --opprint filter '$Platform == "Pypi" && $Language == "Python"' then uniq -n -g "ID" projects-1.4.0-2018-12-22.csv
+   95159
 ```
 Python-language Pypi packages, each of which sends one request to the
 [Contributors endpoint](https://libraries.io/api#project-contributors)
@@ -225,12 +225,12 @@ when coupled with
 As all projects that are to be loaded are hosted on Pypi, the first
 node to be created in the graph is the Pypi `Platform` node itself:
 ```cypher
-CREATE (p:Platform {name: 'Pypi'});
+CREATE (:Platform {name: 'Pypi'});
 ```
 Not all projects hosted on Pypi are written in Python, but those are
 the focus of this analysis, so we need a Python `Language` node:
 ```cypher
-CREATE (l:Language {name: 'Python'});
+CREATE (:Language {name: 'Python'});
 ```
 With these two, we create the first relationship of the graph:
 ```cypher
@@ -359,7 +359,8 @@ call algo.degree(
     "MATCH (:Language {name:'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Platform {name:'Pypi'}) return id(p) as id",
     "MATCH (p1:Project)-[:HAS_VERSION]->(:Version)-[:DEPENDS_ON]->(p2:Project) return id(p2) as source, id(p1) as target",
     {graph: 'cypher', write: true, writeProperty: 'pypi_degree_centrality'}
-);
+)
+;
 ```
 It is **crucially** important to alias as `source` the `Project`
 node MATCHed in the second query as the _end node_ of the
@@ -373,9 +374,8 @@ node, and this query
 MATCH (:Language {name: 'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Platform {name: 'Pypi'})
 WITH p ORDER BY p.pypi_degree_centrality DESC
 WITH collect(p) as projects
-FOREACH (project in projects
-        | SET project.pypi_degree_centrality_rank = apoc.coll.indexOf(projects, project)+1
-)
+UNWIND projects as project
+SET project.pypi_degree_centrality_rank = apoc.coll.indexOf(projects, project) + 1
 ;
 ```
 sets a rank property on each `Project` corresponding to its degree centrality
@@ -420,7 +420,8 @@ call algo.degree(
     "MATCH (:Platform {name:'Pypi'})-[:HOSTS]->(p:Project) with p MATCH (:Language {name:'Python'})<-[:IS_WRITTEN_IN]-(p)<-[:CONTRIBUTES_TO]-(c:Contributor) return id(c) as id",
     "MATCH (c1:Contributor)-[:CONTRIBUTES_TO]->(:Project)-[:HAS_VERSION]->(:Version)-[:DEPENDS_ON]->(:Project)<-[:CONTRIBUTES_TO]-(c2:Contributor) return id(c2) as source, id(c1) as target",
     {graph: 'cypher', write: true, writeProperty: 'pypi_degree_centrality'}
-);
+)
+;
 ```
 (the file linked to has a subsequent query to create a property that is the
 rank of every contributor in terms of `pypi_degree_centrality`)
@@ -464,7 +465,7 @@ Indeed, using the [`algo.similarity.pearson` function](https://neo4j.com/docs/gr
 MATCH (:Language {name: 'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Platform {name: 'Pypi'})
 MATCH (p)<-[ct:CONTRIBUTES_TO]-(c:Contributor)
 WHERE p.pypi_degree_centrality_rank <= 10
-WITH c, count(ct) as num_top_10_contributions
+WITH distinct c, count(ct) as num_top_10_contributions
 WITH collect(c.pypi_degree_centrality) as dc, collect(num_top_10_contributions) as tc
 RETURN algo.similarity.pearson(dc, tc) AS degree_centrality_top_10_contributions_correlation_estimate
 ;
