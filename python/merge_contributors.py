@@ -61,7 +61,7 @@ def create_contributor_node(d: Dict, label: str = "Contributor") -> Node:
 
 def main(argv=None):
     if argv is None:
-        argv: list = sys.argv
+        argv: List = sys.argv
 
     DB, merged_contributors, batch_size = argv[1:]
     g: Graph = Graph(password=get_graph_password())
@@ -80,7 +80,7 @@ def main(argv=None):
     # from SQLite
     print("Querying Neo4j for nodes representing Python projects on Pypi\n",
           file=sys.stderr)
-    projects_cursor: Cursor = execute_cypher_match_statement(
+    projects_cursor: Cursor = execute_cypher_statement(
         g, python_projects_on_pypi_query % int(merged_contributors)
     )
 
