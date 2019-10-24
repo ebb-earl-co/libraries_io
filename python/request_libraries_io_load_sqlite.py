@@ -4,7 +4,7 @@
 """ This is the main runner script for querying the Libraries.io
 API, project contributors endpoint and loading the response (and error, if any)
 to sqlite. As the API rate limits to 60 per minute, 60 or fewer API calls
-will be made at a time, with `time.sleep` called between batches.
+will be made in that time period, managed by the `ratelimit` module.
 """
 
 from functools import partial
@@ -18,10 +18,9 @@ from requests import PreparedRequest, Request, Response, Session
 from logger import return_logger
 from utils.libraries_io_project_contributors_endpoint import \
     build_get_request, content_and_error, parse_request_response_content, URL
-from utils.utils import \
-        (connect, craft_sqlite_project_names_update,
-         craft_sqlite_project_names_insert, partition, return_parser,
-         execute_sqlite_query, Binary, Row)
+from utils.utils import (connect, craft_sqlite_project_names_update,
+                         craft_sqlite_project_names_insert, partition,
+                         return_parser, execute_sqlite_query, Binary, Row)
 
 
 @on_exception(expo, RateLimitException, max_tries=10)
@@ -40,10 +39,9 @@ def request_with_session(session, project_name, prepared_request):
         (requests.Response): the response from prepared_request.url
     """
     response = session.send(prepared_request)
-    page = \
-        int(next(filter(
-            lambda param: param if param.startswith('page') else None,
-            response.request.url.split('&')))[-1])
+    page = int(next(filter(
+        lambda param: param if param.startswith('page') else None,
+        response.request.url.split('&')))[-1])
     logger.info(f"Sent request for project '{project_name}', page {page}")
     yield (project_name, page, response)
     next_page = response.links.get('next', None)
@@ -71,12 +69,10 @@ def main():
     with Session() as s:
         request_: Callable = partial(request_with_session, s)
         project_names_and_requests: Generator[Tuple[str, Request]] = \
-            ((project_name, build_get_request(URL % project_name, True, 100, 1))
-             for project_name in project_names)
+            ((p_n, build_get_request(URL % p_n, True, 100, 1)) for p_n in project_names)
 
         project_names_and_prepared_requests: Iterator[Tuple[str, PreparedRequest]] = \
-            map(lambda tup: (tup[0], s.prepare_request(tup[1])),
-                project_names_and_requests)
+            map(lambda tup: (tup[0], s.prepare_request(tup[1])), project_names_and_requests)
 
         project_names_pages_responses_gens: Iterator[Generator[Tuple[str, int, Response]]] = \
             map(lambda tup: request_(*tup), project_names_and_prepared_requests)
@@ -101,6 +97,7 @@ def main():
         partition(lambda tup: tup[1] == 1, project_names_pages_ahbq_aqs_content_and_errors)
     # Iterator[Tuple[str, int, int, int, content_and_error]]
 
+
     page_1_record_update_queries_parameters: Iterator[Tuple[str, Tuple[Union[None, str], Union[None, Binary]]]] = \
         map(lambda tup: (craft_sqlite_project_names_update(*tup[:-1]),
             (tup[-1].error, Binary(tup[-1].content) if tup[-1].content is not None else None)),
@@ -118,12 +115,12 @@ def main():
     )
 
     with connect(args.DB) as conn:
-        execute_ = partial(execute_sqlite_query, conn)
+        execute_: Callable = partial(execute_sqlite_query, conn)
         return_codes: Iterator[Union[int, None]] = \
             it.starmap(execute_, queries_and_parameters)
-        successfully_queried: int = sum(map(lambda rc: rc == 0, return_codes))
+        successes: int = sum(map(lambda rc: rc == 0, return_codes))
 
-    logger.info(f"{successfully_queried} records successfully inserted/updated")
+    logger.info(f"{successes} records successfully inserted/updated")
 
 
 if __name__ == "__main__":

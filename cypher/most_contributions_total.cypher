@@ -1,6 +1,9 @@
 MATCH (:Language {name: 'Python'})<-[:IS_WRITTEN_IN]-(p:Project)<-[:HOSTS]-(:Platform {name: 'Pypi'})
-WITH p
 MATCH (p)<-[ct:CONTRIBUTES_TO]-(c:Contributor)
-WITH c, count(ct) AS num_total_contributions
-RETURN c, num_total_contributions ORDER BY num_total_contributions DESC
+WITH c, COUNT(ct) AS num_projects_contributed_to
+ORDER BY num_projects_contributed_to DESC
+SET c.pypi_total_projects_contributed_to = num_projects_contributed_to
+WITH collect(distinct c) as contributors
+UNWIND contributors as contributor
+SET contributor.pypi_total_projects_contributed_to_rank = apoc.coll.indexOf(contributors, contributor) + 1
 ;

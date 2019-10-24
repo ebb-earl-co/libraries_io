@@ -27,7 +27,7 @@ def get_graph_password(env_variable_name: str = GRAPHDBPASS) -> str:
     return pw
 
 
-def execute_cypher_statement(g: Graph, statement: str, **kwargs) -> Cursor:
+def execute_cypher_match_statement(g: Graph, statement: str, **kw) -> Cursor:
     """ Return the iterator of query results from `py2neo.Graph.run`
     Args:
         g (py2neo.Graph): the graph object representing DB to interact with
@@ -36,7 +36,7 @@ def execute_cypher_statement(g: Graph, statement: str, **kwargs) -> Cursor:
     Returns:
         (py2neo.database.Cursor): query results
     """
-    cursor: Cursor = g.run(statement, **kwargs)
+    cursor: Cursor = g.run(statement, **kw)
     return cursor
 
 
@@ -123,13 +123,15 @@ def main(argv=None):
             for pnode_cnode in batch:
                 pnode, cnode = pnode_cnode
                 projects[pnode] += 1
-                print(f"MERGEing contributors to Neo4j for project {pnode['name']}",
-                      file=sys.stderr)
-                print(f"\tMERGEing contributor {projects[pnode]}: {cnode.get('name')}",
-                      file=sys.stderr)
+                if projects[pnode] == 1:
+                    print("MERGEing contributors to Neo4j for project "
+                          f"{pnode['name']}", file=sys.stderr)
+                print(f"\tMERGEing contributor {projects[pnode]}: "
+                      "{cnode.get('name')}", file=sys.stderr)
                 tx.merge(cnode, "Contributor", "uuid")
                 print("\t\tMERGEing relationship to contributor "
-                      f"{projects[pnode]}: {cnode.get('name')}", file=sys.stderr)
+                      f"{projects[pnode]}: {cnode.get('name')}",
+                      file=sys.stderr)
                 rel = Relationship(cnode, "CONTRIBUTES_TO", pnode)
                 tx.merge(rel)
             else:
