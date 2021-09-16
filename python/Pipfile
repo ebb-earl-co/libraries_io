@@ -1,7 +1,7 @@
 [[source]]
-name = "pypi"
-url = "https://pypi.org/simple"
+url = "https://pypi.python.org/simple"
 verify_ssl = true
+name = "pypi"
 
 [dev-packages]
 pytest = "*"
@@ -9,11 +9,12 @@ hypothesis = "*"
 responses = "*"
 
 [packages]
-py2neo = "*"
-neo4j-driver = "*"
+networkx = "*"
+neo4j = "==4.3.4"
 requests = "*"
 ratelimit = "*"
 backoff = "*"
+py2neo = "*"
 
 [requires]
 python_version = "3.9"

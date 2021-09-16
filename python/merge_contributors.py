@@ -6,7 +6,7 @@ import json
 import os
 import sys
 from collections import defaultdict
-from typing import ByteString, Dict, Generator, Iterator, List, Text, Tuple
+from typing import ByteString, Dict, Generator, Iterator, List, Optional, Text, Tuple
 
 from py2neo import Graph, Node, Relationship
 from py2neo.database import Cursor
@@ -16,7 +16,7 @@ from utils.utils import chunk, connect, Row
 GRAPHDBPASS = 'GRAPHDBPASS'
 
 
-def get_graph_password(env_variable_name: str = GRAPHDBPASS) -> str:
+def get_graph_password(env_variable_name: str = GRAPHDBPASS) -> Optional[str]:
     """ Get graph password that is set as ENV variable
     Args:
         env_variable_name (str): the environment variable to get

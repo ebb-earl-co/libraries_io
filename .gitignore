@@ -108,3 +108,5 @@ venv.bak/
 
 # huge data file
 *.gz
+./neo4j_desktop_activation_key.txt
+*.csv
