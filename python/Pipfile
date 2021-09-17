@@ -7,6 +7,7 @@ name = "pypi"
 pytest = "*"
 hypothesis = "*"
 responses = "*"
+pandas = "*"
 
 [packages]
 networkx = "*"
@@ -15,6 +16,8 @@ requests = "*"
 ratelimit = "*"
 backoff = "*"
 py2neo = "*"
+matplotlib = "*"
+scipy = "*"
 
 [requires]
 python_version = "3.9"
