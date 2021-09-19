@@ -12,8 +12,8 @@ If the request is successful, the JSON response is returned to STDOUT. Otherwise
 the error that occurred during the request is returned in JSON format to STDOUT.
 """
 
-from neo4j import DirectDriver
-from neo4j.exceptions import CypherError, ServiceUnavailable
+from neo4j import GraphDatabase
+from neo4j.exceptions import CypherSyntaxError, ServiceUnavailable
 
 from contextlib import closing
 from getpass import getpass
@@ -35,7 +35,7 @@ def get_neo4j_driver(uri, auth, **kwargs):
     Returns:
         (neo4j.Driver): driver object to interact with graph at `uri`
     """
-    return DirectDriver(uri, auth=auth)
+    return GraphDatabase.driver(uri, auth=auth)
 
 
 def execute_cypher_query(driver, query, params=None):
@@ -72,7 +72,7 @@ def main(argv=None):
     with closing(get_neo4j_driver(URI, authentication)) as driver:
         try:
             result = execute_cypher_query(driver, query)
-        except CypherError as c:
+        except CypherSyntaxError as c:
             to_return = json.dumps({"CypherError": str(c)})
             print("Cypher error occurred", file=sys.stderr)
             return to_return

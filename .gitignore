@@ -100,6 +100,9 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# VS Cod{e,ium}
+.vscode
+
 # mypy
 .mypy_cache/
 

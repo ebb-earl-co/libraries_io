@@ -14,7 +14,7 @@ the Libraries.io API.*
 The fetching of results is complicated by the `page` and `per_page` parameters
 of the API. The max `per_page` allowed is 100, so if there are more than 100
 contributors for a given project, the response's content must be checked and
-the API called again until all `page`s of results are retreived. If the process
+the API called again until all `page`s of results are retrieved. If the process
 is successful, the combined JSON response is returned to STDOUT. Otherwise,
 the error that occurred during the request(s) is returned in JSON format to STDOUT.
 """

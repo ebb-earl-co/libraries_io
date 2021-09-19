@@ -5,7 +5,7 @@ import os
 import sys
 from traceback import print_tb
 from py2neo import Graph
-from py2neo.database import GraphError
+from py2neo.database import Neo4jError
 
 GRAPHDBPASS = 'GRAPHDBPASS'
 
@@ -40,8 +40,8 @@ def main(argv=None):
 
     try:
         g.evaluate(merged_contributors_property_query)
-    except GraphError as ge:
-        print_tb(ge, file=sys.stderr)
+    except Neo4jError as ne:
+        print_tb(ne, file=sys.stderr)
         sys.exit(1)
     else:
         print(f"Query\n{merged_contributors_property_query}\nexecuted successfully",

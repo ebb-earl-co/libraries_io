@@ -17,7 +17,7 @@ def test_main_no_argument_passed(capsys):
 def test_main_sqlitedb_does_not_exist(capsys):
     argv = [__name__, 'test.db']
     return_value = main(argv)
-    out, err = capsys.readouterr()
+    _, err = capsys.readouterr()
 
     assert return_value == 0
     assert err == "Table created successfully\n"
@@ -27,7 +27,7 @@ def test_main_sqlitedb_does_not_exist(capsys):
 def test_main_sqlitedb_does_exist(capsys):
     argv = [__name__, 'test.db']
     return_value = main(argv)
-    out, err = capsys.readouterr()
+    _, err = capsys.readouterr()
 
     assert return_value == 0
     assert err == "Table has already been created\n"

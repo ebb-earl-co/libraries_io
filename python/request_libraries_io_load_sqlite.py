@@ -15,12 +15,12 @@ from backoff import on_exception, expo
 from ratelimit import limits, RateLimitException
 from requests import PreparedRequest, Request, Response, Session
 
-from logger import return_logger
-from utils.libraries_io_project_contributors_endpoint import \
+from .logger import return_logger
+from .utils.libraries_io_project_contributors_endpoint import \
     build_get_request, content_and_error, parse_request_response_content, URL
-from utils.utils import (connect, craft_sqlite_project_names_update,
-                         craft_sqlite_project_names_insert, partition,
-                         return_parser, execute_sqlite_query, Binary, Row)
+from .utils.utils import (connect, craft_sqlite_project_names_update,
+                          craft_sqlite_project_names_insert, partition,
+                          return_parser, execute_sqlite_query, Binary, Row)
 
 
 @on_exception(expo, RateLimitException, max_tries=10)

@@ -11,7 +11,7 @@ from typing import ByteString, Dict, Generator, Iterator, List, Optional, Text, 
 from py2neo import Graph, Node, Relationship
 from py2neo.database import Cursor
 
-from utils.utils import chunk, connect, Row
+from .utils.utils import chunk, connect, Row
 
 GRAPHDBPASS = 'GRAPHDBPASS'
 
@@ -80,7 +80,7 @@ def main(argv=None):
     # from SQLite
     print("Querying Neo4j for nodes representing Python projects on Pypi\n",
           file=sys.stderr)
-    projects_cursor: Cursor = execute_cypher_statement(
+    projects_cursor: Cursor = execute_cypher_match_statement(
         g, python_projects_on_pypi_query % int(merged_contributors)
     )
 
@@ -119,7 +119,7 @@ def main(argv=None):
         batches = chunk(project_nodes__contributor_nodes, int(batch_size))
         projects = defaultdict(int)
         for batch in batches:
-            tx = g.begin(autocommit=False)
+            tx = g.begin()
             for pnode_cnode in batch:
                 pnode, cnode = pnode_cnode
                 projects[pnode] += 1
@@ -138,7 +138,7 @@ def main(argv=None):
                 tx.commit()
 
         for project, count in projects.items():
-            tx = g.begin(autocommit=False)
+            tx = g.begin()
             print("Upating 'merged_contributors' property for Project node "
                   f"{project} with value {count}", file=sys.stderr)
             project.update(merged_contributors=count)

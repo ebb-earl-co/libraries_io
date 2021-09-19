@@ -8,7 +8,7 @@ import traceback
 from argparse import ArgumentParser, RawTextHelpFormatter
 from sqlite3 import connect, OperationalError, IntegrityError
 
-from get_pypi_python_projects_from_neo4j import \
+from .get_pypi_python_projects_from_neo4j import \
     getpass, get_neo4j_driver, execute_cypher_query, URI
 
 
